@@ -1,54 +1,112 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Task } from "@/types/task";
 
-const STORAGE_KEY = "task-manager-tasks";
-
-function loadTasks(): Task[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+function rowToTask(row: any): Task {
+  return {
+    id: row.id,
+    type: row.type as Task["type"],
+    heading: row.heading ?? undefined,
+    description: row.description,
+    taskCategory: row.task_category as Task["taskCategory"] | undefined,
+    createdAt: row.created_at,
+    completedAt: row.completed_at ?? undefined,
+    completed: row.completed,
+  };
 }
 
 export function useTaskManager() {
-  const [tasks, setTasks] = useState<Task[]>(loadTasks);
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const queryKey = ["tasks", user?.id];
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-  }, [tasks]);
+  const { data: tasks = [] } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map(rowToTask);
+    },
+    enabled: !!user,
+  });
 
-  const addTask = useCallback((task: Omit<Task, "id" | "createdAt" | "completed">) => {
-    const newTask: Task = {
-      ...task,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      completed: false,
-    };
-    setTasks((prev) => [newTask, ...prev]);
-  }, []);
+  const invalidate = () => qc.invalidateQueries({ queryKey });
 
-  const updateTask = useCallback((id: string, updates: Partial<Omit<Task, "id">>) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
-  }, []);
+  const addTaskMutation = useMutation({
+    mutationFn: async (task: Omit<Task, "id" | "createdAt" | "completed">) => {
+      const { error } = await supabase.from("tasks").insert({
+        user_id: user!.id,
+        type: task.type,
+        heading: task.heading || null,
+        description: task.description,
+        task_category: task.taskCategory || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
 
-  const deleteTask = useCallback((id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Omit<Task, "id">> }) => {
+      const payload: any = {};
+      if (updates.description !== undefined) payload.description = updates.description;
+      if (updates.heading !== undefined) payload.heading = updates.heading || null;
+      if (updates.taskCategory !== undefined) payload.task_category = updates.taskCategory || null;
+      if (updates.type !== undefined) payload.type = updates.type;
+      const { error } = await supabase.from("tasks").update(payload).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
 
-  const toggleComplete = useCallback((id: string) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? { ...t, completed: !t.completed, completedAt: !t.completed ? new Date().toISOString() : undefined }
-          : t
-      )
-    );
-  }, []);
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("tasks").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
 
-  const activeTasks = tasks.filter((t) => !t.completed);
-  const completedTasks = tasks.filter((t) => t.completed);
+  const toggleCompleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const task = tasks.find((t) => t.id === id);
+      if (!task) return;
+      const { error } = await supabase
+        .from("tasks")
+        .update({
+          completed: !task.completed,
+          completed_at: !task.completed ? new Date().toISOString() : null,
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const addTask = useCallback(
+    (task: Omit<Task, "id" | "createdAt" | "completed">) => addTaskMutation.mutate(task),
+    [addTaskMutation]
+  );
+  const updateTask = useCallback(
+    (id: string, updates: Partial<Omit<Task, "id">>) => updateTaskMutation.mutate({ id, updates }),
+    [updateTaskMutation]
+  );
+  const deleteTask = useCallback(
+    (id: string) => deleteTaskMutation.mutate(id),
+    [deleteTaskMutation]
+  );
+  const toggleComplete = useCallback(
+    (id: string) => toggleCompleteMutation.mutate(id),
+    [toggleCompleteMutation]
+  );
+
+  const activeTasks = useMemo(() => tasks.filter((t) => !t.completed), [tasks]);
+  const completedTasks = useMemo(() => tasks.filter((t) => t.completed), [tasks]);
 
   const today = new Date();
   const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();

@@ -1,5 +1,6 @@
-import { ListTodo, LayoutDashboard, History } from "lucide-react";
+import { ListTodo, LayoutDashboard, History, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -9,8 +10,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
 const items = [
   { title: "Tasks", url: "/", icon: ListTodo },
@@ -20,6 +23,7 @@ const items = [
 
 export function AppSidebar() {
   const { state } = useSidebar();
+  const { signOut, user } = useAuth();
   const collapsed = state === "collapsed";
 
   return (
@@ -50,6 +54,15 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="p-2">
+        {!collapsed && user && (
+          <p className="mb-1 truncate px-2 text-xs text-muted-foreground">{user.email}</p>
+        )}
+        <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={signOut}>
+          <LogOut className="h-4 w-4" />
+          {!collapsed && "Sign Out"}
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   );
 }
