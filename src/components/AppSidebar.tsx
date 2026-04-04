@@ -1,6 +1,7 @@
-import { ListTodo, LayoutDashboard, History, LogOut } from "lucide-react";
+import { ListTodo, LayoutDashboard, History, LogOut, Moon, Sun } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +25,7 @@ const items = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const { signOut, user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const collapsed = state === "collapsed";
 
   return (
@@ -54,9 +56,18 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-2">
+      <SidebarFooter className="p-2 space-y-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2"
+          onClick={toggleTheme}
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {!collapsed && (theme === "dark" ? "Light Mode" : "Dark Mode")}
+        </Button>
         {!collapsed && user && (
-          <p className="mb-1 truncate px-2 text-xs text-muted-foreground">{user.email}</p>
+          <p className="truncate px-2 text-xs text-muted-foreground">{user.email}</p>
         )}
         <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={signOut}>
           <LogOut className="h-4 w-4" />
