@@ -23,10 +23,14 @@ const items = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const { signOut, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const collapsed = state === "collapsed";
+
+  const handleNavClick = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -45,6 +49,7 @@ export function AppSidebar() {
                       end
                       className="hover:bg-accent/60"
                       activeClassName="bg-accent text-primary font-medium"
+                      onClick={handleNavClick}
                     >
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
