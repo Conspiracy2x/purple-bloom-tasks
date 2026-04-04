@@ -62,7 +62,7 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">{isLogin ? "Welcome back" : "Create account"}</CardTitle>
+          <CardTitle className="text-2xl font-bold">Just Do It</CardTitle>
           <CardDescription>
             {isLogin ? "Sign in to access your tasks" : "Sign up to start managing tasks"}
           </CardDescription>
