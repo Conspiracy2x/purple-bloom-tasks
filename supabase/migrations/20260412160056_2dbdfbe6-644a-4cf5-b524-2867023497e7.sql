@@ -1,0 +1,1 @@
+ALTER TABLE public.tasks DROP CONSTRAINT IF EXISTS tasks_task_category_check;
