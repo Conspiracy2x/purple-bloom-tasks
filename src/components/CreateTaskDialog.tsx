@@ -35,7 +35,9 @@ export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
     setTaskType("normal");
     setHeading("");
     setDescription("");
-    setCategory("Other");
+    setCategory("Work");
+    setIsCustomCategory(false);
+    setCustomCategory("");
   };
 
   const handleClose = () => {
@@ -50,10 +52,11 @@ export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
 
   const handleSubmit = () => {
     if (!description.trim()) return;
+    const finalCategory = isCustomCategory ? customCategory.trim() : category;
     onSave({
       type: taskType,
       description: description.trim(),
-      ...(taskType === "detailed" && { heading: heading.trim(), taskCategory: category }),
+      ...(taskType === "detailed" && { heading: heading.trim(), taskCategory: finalCategory || "Work" }),
     });
     handleClose();
   };
@@ -64,7 +67,14 @@ export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
     setTaskType(editTask.type);
     setHeading(editTask.heading ?? "");
     setDescription(editTask.description);
-    setCategory(editTask.taskCategory ?? "Other");
+    const editCat = editTask.taskCategory ?? "Work";
+    if (defaultCategories.includes(editCat)) {
+      setCategory(editCat);
+      setIsCustomCategory(false);
+    } else {
+      setIsCustomCategory(true);
+      setCustomCategory(editCat);
+    }
   }
 
   return (
@@ -114,14 +124,36 @@ export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>
-                    <Select value={category} onValueChange={(v) => setCategory(v as TaskCategory)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {categories.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {isCustomCategory ? (
+                      <div className="flex gap-2">
+                        <Input
+                          id="category"
+                          placeholder="Enter custom category..."
+                          value={customCategory}
+                          onChange={(e) => setCustomCategory(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button variant="ghost" size="sm" onClick={() => { setIsCustomCategory(false); setCustomCategory(""); setCategory("Work"); }}>
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Select value={category} onValueChange={(v) => {
+                        if (v === "__custom__") {
+                          setIsCustomCategory(true);
+                        } else {
+                          setCategory(v as TaskCategory);
+                        }
+                      }}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {defaultCategories.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                          <SelectItem value="__custom__">Custom...</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 </>
               )}
