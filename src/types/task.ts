@@ -1,5 +1,5 @@
 export type TaskType = "normal" | "detailed";
-export type TaskCategory = "Work" | "Study" | "Personal" | "Other";
+export type TaskCategory = "Work" | "Study" | "Personal" | string;
 
 export interface Task {
   id: string;
