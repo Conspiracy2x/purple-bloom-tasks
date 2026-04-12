@@ -19,14 +19,16 @@ interface Props {
   editTask?: Task | null;
 }
 
-const categories: TaskCategory[] = ["Work", "Study", "Personal", "Other"];
+const defaultCategories: TaskCategory[] = ["Work", "Study", "Personal"];
 
 export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
   const [step, setStep] = useState<"choose" | "form">(editTask ? "form" : "choose");
   const [taskType, setTaskType] = useState<TaskType>(editTask?.type ?? "normal");
   const [heading, setHeading] = useState(editTask?.heading ?? "");
   const [description, setDescription] = useState(editTask?.description ?? "");
-  const [category, setCategory] = useState<TaskCategory>(editTask?.taskCategory ?? "Other");
+  const [category, setCategory] = useState<TaskCategory>(editTask?.taskCategory ?? "Work");
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customCategory, setCustomCategory] = useState("");
 
   const reset = () => {
     setStep("choose");
