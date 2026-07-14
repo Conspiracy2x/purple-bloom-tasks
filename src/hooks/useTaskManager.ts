@@ -14,6 +14,8 @@ function rowToTask(row: any): Task {
     createdAt: row.created_at,
     completedAt: row.completed_at ?? undefined,
     completed: row.completed,
+    color: row.color ?? null,
+    position: typeof row.position === "number" ? row.position : 0,
   };
 }
 
@@ -28,7 +30,7 @@ export function useTaskManager() {
       const { data, error } = await supabase
         .from("tasks")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("position", { ascending: true });
       if (error) throw error;
       return (data ?? []).map(rowToTask);
     },
@@ -39,12 +41,16 @@ export function useTaskManager() {
 
   const addTaskMutation = useMutation({
     mutationFn: async (task: Omit<Task, "id" | "createdAt" | "completed">) => {
+      // Place new tasks at the top (lowest position value)
+      const minPos = tasks.reduce((m, t) => Math.min(m, t.position ?? 0), 0);
       const { error } = await supabase.from("tasks").insert({
         user_id: user!.id,
         type: task.type,
         heading: task.heading || null,
         description: task.description,
         task_category: task.taskCategory || null,
+        color: task.color || null,
+        position: minPos - 1,
       });
       if (error) throw error;
     },
@@ -58,6 +64,7 @@ export function useTaskManager() {
       if (updates.heading !== undefined) payload.heading = updates.heading || null;
       if (updates.taskCategory !== undefined) payload.task_category = updates.taskCategory || null;
       if (updates.type !== undefined) payload.type = updates.type;
+      if (updates.color !== undefined) payload.color = updates.color || null;
       const { error } = await supabase.from("tasks").update(payload).eq("id", id);
       if (error) throw error;
     },
@@ -88,6 +95,32 @@ export function useTaskManager() {
     onSuccess: invalidate,
   });
 
+  const reorderTasksMutation = useMutation({
+    mutationFn: async (updates: { id: string; position: number }[]) => {
+      await Promise.all(
+        updates.map((u) =>
+          supabase.from("tasks").update({ position: u.position }).eq("id", u.id)
+        )
+      );
+    },
+    onMutate: async (updates) => {
+      await qc.cancelQueries({ queryKey });
+      const prev = qc.getQueryData<Task[]>(queryKey);
+      if (prev) {
+        const map = new Map(updates.map((u) => [u.id, u.position]));
+        const next = prev
+          .map((t) => (map.has(t.id) ? { ...t, position: map.get(t.id)! } : t))
+          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+        qc.setQueryData(queryKey, next);
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(queryKey, ctx.prev);
+    },
+    onSettled: invalidate,
+  });
+
   const addTask = useCallback(
     (task: Omit<Task, "id" | "createdAt" | "completed">) => addTaskMutation.mutate(task),
     [addTaskMutation]
@@ -103,6 +136,10 @@ export function useTaskManager() {
   const toggleComplete = useCallback(
     (id: string) => toggleCompleteMutation.mutate(id),
     [toggleCompleteMutation]
+  );
+  const reorderTasks = useCallback(
+    (updates: { id: string; position: number }[]) => reorderTasksMutation.mutate(updates),
+    [reorderTasksMutation]
   );
 
   const activeTasks = useMemo(() => tasks.filter((t) => !t.completed), [tasks]);
@@ -124,6 +161,7 @@ export function useTaskManager() {
     updateTask,
     deleteTask,
     toggleComplete,
+    reorderTasks,
     completedToday,
     completedThisWeek,
     totalCompleted,
