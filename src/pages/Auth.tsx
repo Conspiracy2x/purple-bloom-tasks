@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { LogIn, UserPlus, Loader2 } from "lucide-react";
+import { LogIn, UserPlus, Loader2, CheckCircle2 } from "lucide-react";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -59,12 +59,29 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Just Do It</CardTitle>
-          <CardDescription>
-            {isLogin ? "Sign in to access your tasks" : "Sign up to start managing tasks"}
+    <div className="relative flex min-h-screen items-center justify-center bg-background p-4 overflow-hidden">
+      <div aria-hidden className="absolute inset-0 -z-10 bg-aurora animate-aurora" />
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10 opacity-[0.04]"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+        }}
+      />
+      <Card className="w-full max-w-sm glass shadow-glow rounded-3xl animate-scale-in border-border/60">
+        <CardHeader className="text-center pt-8">
+          <div className="mx-auto mb-4 relative">
+            <div className="h-14 w-14 rounded-2xl bg-mint-gradient grid place-items-center shadow-glow">
+              <CheckCircle2 className="h-7 w-7 text-primary-foreground" strokeWidth={2.5} />
+            </div>
+            <div className="absolute inset-0 rounded-2xl bg-primary/40 blur-xl -z-10" />
+          </div>
+          <CardTitle className="font-display text-2xl font-semibold tracking-tight">
+            Just <span className="text-mint-gradient">Do It</span>
+          </CardTitle>
+          <CardDescription className="text-sm">
+            {isLogin ? "Welcome back. Focus and ship." : "Start shipping small consistent wins."}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -88,6 +105,7 @@ export default function Auth() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
+                className="h-11 rounded-xl bg-background/60"
               />
             </div>
             <div className="space-y-2">
@@ -99,11 +117,16 @@ export default function Auth() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={isLogin ? "current-password" : "new-password"}
+                className="h-11 rounded-xl bg-background/60"
               />
             </div>
           </CardContent>
-          <CardFooter className="flex-col gap-3">
-            <Button type="submit" className="w-full gap-2" disabled={loading}>
+          <CardFooter className="flex-col gap-3 pb-8">
+            <Button
+              type="submit"
+              className="w-full h-11 gap-2 rounded-xl bg-mint-gradient text-primary-foreground border-0 shadow-glow hover:opacity-95"
+              disabled={loading}
+            >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : isLogin ? (
@@ -111,19 +134,19 @@ export default function Auth() {
               ) : (
                 <UserPlus className="h-4 w-4" />
               )}
-              {isLogin ? "Sign In" : "Sign Up"}
+              <span className="font-medium">{isLogin ? "Sign in" : "Create account"}</span>
             </Button>
             <Button
               type="button"
               variant="link"
-              className="text-sm"
+              className="text-xs text-muted-foreground hover:text-primary"
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError(null);
                 setMessage(null);
               }}
             >
-              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+              {isLogin ? "New here? Create an account →" : "Have an account? Sign in →"}
             </Button>
           </CardFooter>
         </form>
