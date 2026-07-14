@@ -9,6 +9,8 @@ import { AnimatePresence } from "framer-motion";
 import {
   DndContext,
   DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
   PointerSensor,
   TouchSensor,
   KeyboardSensor,
@@ -27,6 +29,8 @@ export default function Tasks() {
   const { activeTasks, completedTasks, addTask, updateTask, deleteTask, toggleComplete, reorderTasks } = useTaskManager();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeDragTask = activeId ? activeTasks.find((t) => t.id === activeId) ?? null : null;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -36,6 +40,7 @@ export default function Tasks() {
 
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
+    setActiveId(null);
     if (!over || active.id === over.id) return;
     const oldIndex = activeTasks.findIndex((t) => t.id === active.id);
     const newIndex = activeTasks.findIndex((t) => t.id === over.id);
@@ -45,6 +50,9 @@ export default function Tasks() {
     const updates = reordered.map((t, i) => ({ id: t.id, position: i }));
     reorderTasks(updates);
   };
+
+  const handleDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
+  const handleDragCancel = () => setActiveId(null);
 
   const handleEdit = (task: Task) => {
     setEditingTask(task);
@@ -76,7 +84,13 @@ export default function Tasks() {
         {activeTasks.length === 0 ? (
           <p className="py-12 text-center text-muted-foreground">No active tasks. Add one!</p>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          >
             <SortableContext items={activeTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
@@ -86,6 +100,18 @@ export default function Tasks() {
                 </AnimatePresence>
               </div>
             </SortableContext>
+            <DragOverlay dropAnimation={{ duration: 200 }}>
+              {activeDragTask ? (
+                <div className="rotate-2 scale-[1.02] shadow-2xl ring-2 ring-primary rounded-lg">
+                  <TaskCard
+                    task={activeDragTask}
+                    onToggle={() => {}}
+                    onEdit={() => {}}
+                    onDelete={() => {}}
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         )}
       </section>
