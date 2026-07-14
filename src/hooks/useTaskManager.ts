@@ -1,36 +1,10 @@
 import { useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Task } from "@/types/task";
-import { z } from "zod";
-
-const taskInputSchema = z.object({
-  type: z.enum(["normal", "detailed"]),
-  heading: z.string().trim().max(200, "Heading is too long.").optional().nullable(),
-  description: z
-    .string()
-    .trim()
-    .min(1, "Description cannot be empty.")
-    .max(2000, "Description is too long."),
-  taskCategory: z.string().trim().max(50, "Category is too long.").optional().nullable(),
-  color: z.string().trim().max(32, "Invalid color.").optional().nullable(),
-});
-
-function rowToTask(row: any): Task {
-  return {
-    id: row.id,
-    type: row.type as Task["type"],
-    heading: row.heading ?? undefined,
-    description: row.description,
-    taskCategory: row.task_category as Task["taskCategory"] | undefined,
-    createdAt: row.created_at,
-    completedAt: row.completed_at ?? undefined,
-    completed: row.completed,
-    color: row.color ?? null,
-    position: typeof row.position === "number" ? row.position : 0,
-  };
-}
+import { computeTaskStats, rowToTask, taskInputSchema } from "@/lib/tasks";
 
 export function useTaskManager() {
   const { user } = useAuth();
@@ -181,14 +155,10 @@ export function useTaskManager() {
 
   const activeTasks = useMemo(() => tasks.filter((t) => !t.completed), [tasks]);
   const completedTasks = useMemo(() => tasks.filter((t) => t.completed), [tasks]);
-
-  const today = new Date();
-  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
-  const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay()).toISOString();
-
-  const completedToday = completedTasks.filter((t) => t.completedAt && t.completedAt >= startOfDay).length;
-  const completedThisWeek = completedTasks.filter((t) => t.completedAt && t.completedAt >= startOfWeek).length;
-  const totalCompleted = completedTasks.length;
+  const { completedToday, completedThisWeek, totalCompleted } = useMemo(
+    () => computeTaskStats(completedTasks),
+    [completedTasks],
+  );
 
   return {
     tasks,
