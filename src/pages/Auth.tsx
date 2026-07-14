@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { LogIn, UserPlus, Loader2, CheckCircle2 } from "lucide-react";
+import { LogIn, UserPlus, Loader2, CheckCircle2, Mail } from "lucide-react";
 import { z } from "zod";
 import { useTurnstile } from "@/hooks/useTurnstile";
 
@@ -24,7 +24,7 @@ const passwordSchema = z
 
 export default function Auth() {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,6 +35,7 @@ export default function Auth() {
   const validate = () => {
     const e = emailSchema.safeParse(email);
     if (!e.success) return e.error.issues[0].message;
+    if (mode === "forgot") return null;
     const p = passwordSchema.safeParse(password);
     if (!p.success) return p.error.issues[0].message;
     return null;
@@ -59,11 +60,11 @@ export default function Auth() {
         setLoading(false);
         return;
       }
-      if (isLogin) {
+      if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         navigate("/");
-      } else {
+      } else if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -71,6 +72,13 @@ export default function Auth() {
         });
         if (error) throw error;
         setMessage("Check your email for a verification link before signing in.");
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        setMessage("If an account exists for that email, a reset link is on its way.");
+        turnstile.reset();
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
@@ -103,7 +111,11 @@ export default function Auth() {
             Just <span className="text-mint-gradient">Do It</span>
           </CardTitle>
           <CardDescription className="text-sm">
-            {isLogin ? "Welcome back. Focus and ship." : "Start shipping small consistent wins."}
+            {mode === "login"
+              ? "Welcome back. Focus and ship."
+              : mode === "signup"
+                ? "Start shipping small consistent wins."
+                : "Enter your email and we'll send you a reset link."}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -130,19 +142,36 @@ export default function Auth() {
                 className="h-11 rounded-xl bg-background/60"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={isLogin ? "current-password" : "new-password"}
-                className="h-11 rounded-xl bg-background/60"
-                maxLength={72}
-              />
-            </div>
+            {mode !== "forgot" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  {mode === "login" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("forgot");
+                        setError(null);
+                        setMessage(null);
+                      }}
+                      className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  className="h-11 rounded-xl bg-background/60"
+                  maxLength={72}
+                />
+              </div>
+            )}
             <div
               ref={turnstile.containerRef}
               className="flex justify-center min-h-[65px]"
@@ -157,24 +186,32 @@ export default function Auth() {
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
-              ) : isLogin ? (
+              ) : mode === "login" ? (
                 <LogIn className="h-4 w-4" />
-              ) : (
+              ) : mode === "signup" ? (
                 <UserPlus className="h-4 w-4" />
+              ) : (
+                <Mail className="h-4 w-4" />
               )}
-              <span className="font-medium">{isLogin ? "Sign in" : "Create account"}</span>
+              <span className="font-medium">
+                {mode === "login" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}
+              </span>
             </Button>
             <Button
               type="button"
               variant="link"
               className="text-xs text-muted-foreground hover:text-primary"
               onClick={() => {
-                setIsLogin(!isLogin);
+                setMode(mode === "login" ? "signup" : "login");
                 setError(null);
                 setMessage(null);
               }}
             >
-              {isLogin ? "New here? Create an account →" : "Have an account? Sign in →"}
+              {mode === "forgot"
+                ? "← Back to sign in"
+                : mode === "login"
+                  ? "New here? Create an account →"
+                  : "Have an account? Sign in →"}
             </Button>
           </CardFooter>
         </form>

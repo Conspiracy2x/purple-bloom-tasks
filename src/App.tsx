@@ -11,6 +11,7 @@ import Tasks from "@/pages/Tasks";
 import Dashboard from "@/pages/Dashboard";
 import History from "@/pages/History";
 import Auth from "@/pages/Auth";
+import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -85,6 +86,7 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/auth" element={<AuthRoute />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/*" element={<ProtectedLayout />} />
             </Routes>
           </AuthProvider>
