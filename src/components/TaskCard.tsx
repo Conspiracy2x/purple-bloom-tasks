@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
   task: Task;
@@ -14,9 +15,10 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   sortable?: boolean;
+  index?: number;
 }
 
-export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false }: TaskCardProps) {
+export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, index }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -29,22 +31,13 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false }:
   const style = sortable
     ? {
         transform: CSS.Transform.toString(transform),
-        transition,
+        transition: transition ?? "transform 220ms cubic-bezier(0.2, 0, 0, 1)",
       }
     : undefined;
 
   const tint = task.color || undefined;
 
-  if (sortable && isDragging) {
-    // Show a dashed placeholder at the current drop location; floating card is rendered via DragOverlay.
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="h-[92px] rounded-lg border-2 border-dashed border-primary/60 bg-primary/5"
-      />
-    );
-  }
+  const placeholder = sortable && isDragging;
 
   return (
     <motion.div
@@ -56,6 +49,9 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false }:
       exit={{ opacity: 0, y: -12 }}
       transition={{ duration: 0.2 }}
     >
+      {placeholder ? (
+        <div className="h-[92px] rounded-xl border-2 border-dashed border-primary/70 bg-primary/10 transition-colors" />
+      ) : (
       <Card
         className={`transition-all hover:shadow-md ${task.completed ? "opacity-60" : ""}`}
         style={tint ? { backgroundColor: tint, borderColor: tint } : undefined}
@@ -71,6 +67,16 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false }:
             >
               <GripVertical className="h-4 w-4" />
             </button>
+          )}
+          {typeof index === "number" && (
+            <span
+              className={cn(
+                "mt-1 shrink-0 inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums",
+                tint ? "bg-black/15 text-slate-900" : "bg-muted text-muted-foreground"
+              )}
+            >
+              {index + 1}
+            </span>
           )}
           <Button
             size="icon"
@@ -119,6 +125,7 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false }:
           )}
         </CardContent>
       </Card>
+      )}
     </motion.div>
   );
 }

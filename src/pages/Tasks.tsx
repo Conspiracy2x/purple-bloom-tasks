@@ -33,8 +33,8 @@ export default function Tasks() {
   const activeDragTask = activeId ? activeTasks.find((t) => t.id === activeId) ?? null : null;
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 160, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -94,17 +94,23 @@ export default function Tasks() {
             <SortableContext items={activeTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
-                  {activeTasks.map((t) => (
-                    <TaskCard key={t.id} task={t} onToggle={toggleComplete} onEdit={handleEdit} onDelete={deleteTask} sortable />
+                  {activeTasks.map((t, i) => (
+                    <TaskCard key={t.id} task={t} index={i} onToggle={toggleComplete} onEdit={handleEdit} onDelete={deleteTask} sortable />
                   ))}
                 </AnimatePresence>
               </div>
             </SortableContext>
-            <DragOverlay dropAnimation={{ duration: 200 }}>
+            <DragOverlay
+              dropAnimation={{
+                duration: 240,
+                easing: "cubic-bezier(0.2, 0, 0, 1)",
+              }}
+            >
               {activeDragTask ? (
-                <div className="rotate-2 scale-[1.02] shadow-2xl ring-2 ring-primary rounded-lg">
+                <div className="rotate-1 scale-[1.03] shadow-2xl ring-2 ring-primary/70 rounded-xl">
                   <TaskCard
                     task={activeDragTask}
+                    index={activeTasks.findIndex((t) => t.id === activeDragTask.id)}
                     onToggle={() => {}}
                     onEdit={() => {}}
                     onDelete={() => {}}
@@ -120,8 +126,8 @@ export default function Tasks() {
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Completed</h2>
           <AnimatePresence mode="popLayout">
-            {completedTasks.map((t) => (
-              <TaskCard key={t.id} task={t} onToggle={toggleComplete} onEdit={handleEdit} onDelete={deleteTask} />
+            {completedTasks.map((t, i) => (
+              <TaskCard key={t.id} task={t} index={i} onToggle={toggleComplete} onEdit={handleEdit} onDelete={deleteTask} />
             ))}
           </AnimatePresence>
         </section>
