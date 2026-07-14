@@ -24,6 +24,71 @@ interface Props {
 
 const defaultCategories: TaskCategory[] = ["Work", "Study", "Personal"];
 
+const isValidHex = (v: string) => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v);
+
+function CustomColorPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const isCustom = !!value && !TASK_COLORS.some((c) => c.value === value);
+  const [hex, setHex] = useState(isCustom ? value : "#a78bfa");
+
+  const apply = (v: string) => {
+    setHex(v);
+    if (isValidHex(v)) onChange(v);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Custom color"
+          title="Custom color"
+          className={cn(
+            "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all overflow-hidden",
+            isCustom ? "border-primary scale-110" : "border-border hover:scale-105"
+          )}
+          style={{
+            background: isCustom
+              ? value
+              : "conic-gradient(from 0deg, #ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #ec4899, #ef4444)",
+          }}
+        >
+          {isCustom ? (
+            <Check className="h-4 w-4 text-foreground/70" />
+          ) : (
+            <Pipette className="h-3.5 w-3.5 text-white drop-shadow" />
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 space-y-3" align="start">
+        <div>
+          <Label className="text-xs">Pick a color</Label>
+          <input
+            type="color"
+            value={isValidHex(hex) ? hex : "#a78bfa"}
+            onChange={(e) => apply(e.target.value)}
+            className="mt-1 h-10 w-full cursor-pointer rounded border border-border bg-transparent"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="hex-input" className="text-xs">Hex code</Label>
+          <div className="flex gap-2">
+            <Input
+              id="hex-input"
+              value={hex}
+              onChange={(e) => apply(e.target.value.startsWith("#") ? e.target.value : `#${e.target.value}`)}
+              placeholder="#a78bfa"
+              className="h-8 font-mono text-xs"
+            />
+          </div>
+          {!isValidHex(hex) && (
+            <p className="text-[10px] text-destructive">Enter a valid hex like #a78bfa</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
   const [step, setStep] = useState<"choose" | "form">(editTask ? "form" : "choose");
   const [taskType, setTaskType] = useState<TaskType>(editTask?.type ?? "normal");
