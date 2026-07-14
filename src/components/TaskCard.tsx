@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
   task: Task;
