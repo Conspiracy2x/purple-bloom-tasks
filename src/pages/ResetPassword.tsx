@@ -2,25 +2,18 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, KeyRound, CheckCircle2, Eye, EyeOff } from "lucide-react";
-import { z } from "zod";
-
-const passwordSchema = z
-  .string()
-  .min(8, "Password must be at least 8 characters.")
-  .max(72, "Password is too long.");
+import { Loader2, KeyRound, CheckCircle2 } from "lucide-react";
+import { PasswordInput } from "@/components/PasswordInput";
+import { passwordSchema, getAuthErrorMessage } from "@/lib/validation";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -52,8 +45,8 @@ export default function ResetPassword() {
       if (error) throw error;
       setDone(true);
       setTimeout(() => navigate("/", { replace: true }), 1500);
-    } catch (err: any) {
-      setError(err.message || "Could not update password.");
+    } catch (err: unknown) {
+      setError(getAuthErrorMessage(err, "Could not update password."));
     } finally {
       setLoading(false);
     }
@@ -92,53 +85,29 @@ export default function ResetPassword() {
               )}
               <div className="space-y-2">
                 <Label htmlFor="password">New password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"
-                    maxLength={72}
-                    className="h-11 rounded-xl bg-background/60 pr-10"
-                    disabled={!ready}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
+                <PasswordInput
+                  id="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  maxLength={72}
+                  className="h-11 rounded-xl bg-background/60"
+                  disabled={!ready}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm">Confirm password</Label>
-                <div className="relative">
-                  <Input
-                    id="confirm"
-                    type={showConfirm ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    autoComplete="new-password"
-                    maxLength={72}
-                    className="h-11 rounded-xl bg-background/60 pr-10"
-                    disabled={!ready}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm((v) => !v)}
-                    aria-label={showConfirm ? "Hide password" : "Show password"}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    tabIndex={-1}
-                  >
-                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
+                <PasswordInput
+                  id="confirm"
+                  placeholder="••••••••"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  autoComplete="new-password"
+                  maxLength={72}
+                  className="h-11 rounded-xl bg-background/60"
+                  disabled={!ready}
+                />
               </div>
             </CardContent>
             <CardFooter className="flex-col gap-3 pb-8">
