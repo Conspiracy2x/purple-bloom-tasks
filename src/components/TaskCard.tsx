@@ -50,81 +50,163 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
       transition={{ duration: 0.2 }}
     >
       {placeholder ? (
-        <div className="h-[92px] rounded-xl border-2 border-dashed border-primary/70 bg-primary/10 transition-colors" />
+        <div className="h-[104px] rounded-2xl border-2 border-dashed border-primary/60 bg-primary/[0.06] ring-mint transition-colors" />
       ) : (
-      <Card
-        className={`transition-all hover:shadow-md ${task.completed ? "opacity-60" : ""}`}
-        style={tint ? { backgroundColor: tint, borderColor: tint } : undefined}
-      >
-        <CardContent className="flex items-start gap-2 p-4">
-          {sortable && (
+        <Card
+          className={cn(
+            "relative overflow-hidden rounded-2xl border-border/60 glass shadow-card hover-lift group",
+            task.completed && "opacity-60"
+          )}
+          style={tint ? { backgroundColor: tint, borderColor: "transparent" } : undefined}
+        >
+          {/* Ambient mint glow on hover (non-tinted only) */}
+          {!tint && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              style={{
+                background:
+                  "radial-gradient(400px 120px at var(--x,50%) 0%, hsl(var(--primary) / 0.14), transparent 70%)",
+              }}
+            />
+          )}
+
+          <CardContent className="relative flex items-start gap-3 p-4 sm:p-5">
+            {sortable && (
+              <button
+                type="button"
+                aria-label="Drag to reorder"
+                className={cn(
+                  "mt-1.5 -ml-1 shrink-0 touch-none cursor-grab active:cursor-grabbing rounded-md p-1 transition-colors",
+                  tint ? "text-slate-800/60 hover:text-slate-900 hover:bg-black/10"
+                       : "text-muted-foreground/60 hover:text-primary hover:bg-primary/10"
+                )}
+                {...attributes}
+                {...listeners}
+              >
+                <GripVertical className="h-4 w-4" />
+              </button>
+            )}
+
+            {typeof index === "number" && (
+              <span
+                className={cn(
+                  "mt-0.5 shrink-0 inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-1.5 text-xs font-semibold tabular",
+                  tint
+                    ? "bg-black/15 text-slate-900"
+                    : "bg-primary/10 text-primary ring-1 ring-primary/20"
+                )}
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+            )}
+
             <button
               type="button"
-              aria-label="Drag to reorder"
-              className="mt-1 -ml-1 shrink-0 touch-none cursor-grab active:cursor-grabbing rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent/40"
-              {...attributes}
-              {...listeners}
-            >
-              <GripVertical className="h-4 w-4" />
-            </button>
-          )}
-          {typeof index === "number" && (
-            <span
+              aria-label={task.completed ? "Mark active" : "Mark complete"}
+              onClick={() => onToggle(task.id)}
               className={cn(
-                "mt-1 shrink-0 inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums",
-                tint ? "bg-black/15 text-slate-900" : "bg-muted text-muted-foreground"
+                "mt-0.5 h-7 w-7 shrink-0 rounded-full grid place-items-center transition-all",
+                task.completed
+                  ? "bg-mint-gradient text-primary-foreground shadow-glow"
+                  : tint
+                    ? "border-2 border-slate-900/30 hover:border-slate-900/60 hover:bg-black/5"
+                    : "border-2 border-border hover:border-primary hover:bg-primary/10"
               )}
             >
-              {index + 1}
-            </span>
-          )}
-          <Button
-            size="icon"
-            variant={task.completed ? "default" : "outline"}
-            className="mt-0.5 h-7 w-7 shrink-0 rounded-full"
-            onClick={() => onToggle(task.id)}
-          >
-            {task.completed ? <Undo2 className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
-          </Button>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={task.type === "detailed" ? "default" : "secondary"} className="text-[10px]">
-                {task.type === "detailed" ? "Detailed" : "Normal"}
-              </Badge>
-              {task.taskCategory && (
-                <Badge variant="outline" className="text-[10px]">
-                  {task.taskCategory}
-                </Badge>
+              {task.completed ? (
+                <Undo2 className="h-3.5 w-3.5" />
+              ) : (
+                <Check className={cn("h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity", tint ? "text-slate-900" : "text-primary")} />
               )}
+            </button>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Badge
+                  className={cn(
+                    "text-[10px] font-medium h-5 px-2 border-0",
+                    tint
+                      ? "bg-black/20 text-slate-900"
+                      : task.type === "detailed"
+                        ? "bg-primary/15 text-primary"
+                        : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {task.type === "detailed" ? "Detailed" : "Quick"}
+                </Badge>
+                {task.taskCategory && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] font-medium h-5 px-2",
+                      tint ? "border-slate-900/30 text-slate-900" : "border-border/70 text-muted-foreground"
+                    )}
+                  >
+                    {task.taskCategory}
+                  </Badge>
+                )}
+              </div>
+
+              {task.heading && (
+                <h3
+                  className={cn(
+                    "font-display mt-1.5 font-semibold text-[15px] leading-snug tracking-tight break-words",
+                    task.completed && "line-through",
+                    tint ? "text-slate-900" : "text-foreground"
+                  )}
+                >
+                  {task.heading}
+                </h3>
+              )}
+              <p
+                className={cn(
+                  "mt-0.5 text-sm leading-relaxed break-words",
+                  task.completed && "line-through",
+                  tint ? "text-slate-800" : "text-foreground/80"
+                )}
+              >
+                {task.description}
+              </p>
+              <p
+                className={cn(
+                  "mt-2 text-[11px] tabular",
+                  tint ? "text-slate-700/70" : "text-muted-foreground/80"
+                )}
+              >
+                {format(new Date(task.createdAt), "MMM d · h:mm a")}
+                {task.completedAt && ` · Done ${format(new Date(task.completedAt), "MMM d")}`}
+              </p>
             </div>
 
-            {task.heading && (
-              <h3 className={`mt-1 font-semibold text-sm ${task.completed ? "line-through" : ""} ${tint ? "text-slate-900" : ""}`}>
-                {task.heading}
-              </h3>
+            {!task.completed && (
+              <div className="flex flex-col sm:flex-row gap-0.5 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={cn(
+                    "h-7 w-7 rounded-md",
+                    tint ? "text-slate-800 hover:bg-black/10" : "hover:bg-primary/10 hover:text-primary"
+                  )}
+                  onClick={() => onEdit(task)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={cn(
+                    "h-7 w-7 rounded-md",
+                    tint ? "text-red-800 hover:bg-black/10" : "text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
+                  )}
+                  onClick={() => onDelete(task.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             )}
-            <p className={`mt-0.5 text-sm ${task.completed ? "line-through" : ""} ${tint ? "text-slate-800" : "text-foreground/80"}`}>
-              {task.description}
-            </p>
-            <p className={`mt-1 text-[11px] ${tint ? "text-slate-700/80" : "text-muted-foreground"}`}>
-              {format(new Date(task.createdAt), "MMM d, yyyy · h:mm a")}
-              {task.completedAt && ` · Done ${format(new Date(task.completedAt), "MMM d · h:mm a")}`}
-            </p>
-          </div>
-
-          {!task.completed && (
-            <div className="flex gap-1 shrink-0">
-              <Button size="icon" variant="ghost" className={`h-7 w-7 ${tint ? "text-slate-800 hover:bg-black/10" : ""}`} onClick={() => onEdit(task)}>
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button size="icon" variant="ghost" className={`h-7 w-7 ${tint ? "text-red-700 hover:bg-black/10" : "text-destructive"}`} onClick={() => onDelete(task.id)}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
       )}
     </motion.div>
   );

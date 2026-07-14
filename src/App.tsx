@@ -33,11 +33,33 @@ function ProtectedLayout() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full relative overflow-hidden">
+        {/* Ambient aurora background */}
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 -z-10 bg-aurora animate-aurora"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 -z-10 opacity-[0.035] mix-blend-overlay"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+          }}
+        />
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-12 flex items-center border-b px-2">
-            <SidebarTrigger />
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="sticky top-0 z-30 h-14 flex items-center justify-between border-b border-border/60 bg-background/70 backdrop-blur-xl px-3 md:px-6">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="hover:bg-accent" />
+              <span className="hidden sm:inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-glow" />
+                All systems go
+              </span>
+            </div>
+            <div className="text-xs font-medium text-muted-foreground tabular">
+              {new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+            </div>
           </header>
           <main className="flex-1">
             <Routes>
