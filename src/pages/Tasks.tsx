@@ -163,7 +163,7 @@ export default function Tasks() {
 
             <Button
               onClick={() => { setEditingTask(null); setDialogOpen(true); }}
-              className="h-11 gap-2 rounded-xl bg-mint-gradient text-primary-foreground border-0 shadow-glow hover:opacity-95 hover:scale-[1.02] transition-all"
+              className="hidden sm:inline-flex h-11 gap-2 rounded-xl bg-mint-gradient text-primary-foreground border-0 shadow-glow hover:opacity-95 hover:scale-[1.02] transition-all"
             >
               <Plus className="h-4 w-4" />
               <span className="font-medium">New task</span>
@@ -324,6 +324,23 @@ export default function Tasks() {
         onSave={handleSave}
         editTask={editingTask}
       />
+
+      {/* Floating action button — always reachable, especially on mobile */}
+      <button
+        type="button"
+        aria-label="Create new task"
+        onClick={() => { setEditingTask(null); setDialogOpen(true); }}
+        className={cn(
+          "sm:hidden fixed z-40 bottom-5 right-5",
+          "h-14 w-14 rounded-full bg-mint-gradient text-primary-foreground",
+          "grid place-items-center shadow-glow ring-1 ring-primary/40",
+          "active:scale-95 transition-transform duration-200 ease-out",
+          "animate-pulse-glow"
+        )}
+        style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
+      >
+        <Plus className="h-6 w-6" strokeWidth={2.5} />
+      </button>
     </div>
   );
 }
