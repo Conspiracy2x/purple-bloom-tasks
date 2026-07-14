@@ -3,6 +3,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Task } from "@/types/task";
+import { z } from "zod";
+
+const taskInputSchema = z.object({
+  type: z.enum(["normal", "detailed"]),
+  heading: z.string().trim().max(200, "Heading is too long.").optional().nullable(),
+  description: z
+    .string()
+    .trim()
+    .min(1, "Description cannot be empty.")
+    .max(2000, "Description is too long."),
+  taskCategory: z.string().trim().max(50, "Category is too long.").optional().nullable(),
+  color: z.string().trim().max(32, "Invalid color.").optional().nullable(),
+});
 
 function rowToTask(row: any): Task {
   return {
@@ -41,15 +54,23 @@ export function useTaskManager() {
 
   const addTaskMutation = useMutation({
     mutationFn: async (task: Omit<Task, "id" | "createdAt" | "completed">) => {
+      const parsed = taskInputSchema.safeParse({
+        type: task.type,
+        heading: task.heading,
+        description: task.description,
+        taskCategory: task.taskCategory,
+        color: task.color,
+      });
+      if (!parsed.success) throw new Error(parsed.error.issues[0].message);
       // Place new tasks at the top (lowest position value)
       const minPos = tasks.reduce((m, t) => Math.min(m, t.position ?? 0), 0);
       const { error } = await supabase.from("tasks").insert({
         user_id: user!.id,
-        type: task.type,
-        heading: task.heading || null,
-        description: task.description,
-        task_category: task.taskCategory || null,
-        color: task.color || null,
+        type: parsed.data.type,
+        heading: parsed.data.heading || null,
+        description: parsed.data.description,
+        task_category: parsed.data.taskCategory || null,
+        color: parsed.data.color || null,
         position: minPos - 1,
       });
       if (error) throw error;
@@ -59,6 +80,22 @@ export function useTaskManager() {
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Omit<Task, "id">> }) => {
+      if (updates.description !== undefined) {
+        const r = z.string().trim().min(1).max(2000).safeParse(updates.description);
+        if (!r.success) throw new Error("Description must be 1-2000 characters.");
+      }
+      if (updates.heading !== undefined && updates.heading) {
+        if (updates.heading.length > 200) throw new Error("Heading is too long.");
+      }
+      if (updates.taskCategory !== undefined && updates.taskCategory) {
+        if (updates.taskCategory.length > 50) throw new Error("Category is too long.");
+      }
+      if (updates.type !== undefined && !["normal", "detailed"].includes(updates.type)) {
+        throw new Error("Invalid task type.");
+      }
+      if (updates.color !== undefined && updates.color && updates.color.length > 32) {
+        throw new Error("Invalid color.");
+      }
       const payload: any = {};
       if (updates.description !== undefined) payload.description = updates.description;
       if (updates.heading !== undefined) payload.heading = updates.heading || null;
