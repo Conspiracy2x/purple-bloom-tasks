@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Task, TaskCategory, TaskType, TASK_COLORS } from "@/types/task";
-import { Check } from "lucide-react";
+import { Check, Pipette } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -189,6 +190,7 @@ export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
                       </button>
                     );
                   })}
+                  <CustomColorPicker value={color} onChange={setColor} />
                 </div>
               </div>
             </div>
