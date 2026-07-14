@@ -323,8 +323,10 @@ export default function Tasks() {
             "sm:hidden fixed right-5 z-50",
             "h-14 w-14 rounded-full bg-mint-gradient text-primary-foreground",
             "grid place-items-center shadow-glow ring-1 ring-primary/40",
-            "active:scale-95 transition-transform duration-200 ease-out",
-            "animate-pulse-glow"
+            "transform-gpu will-change-transform",
+            "transition-[transform,box-shadow] duration-200 ease-[cubic-bezier(0.2,0,0,1)]",
+            "hover:scale-105 hover:shadow-[0_24px_60px_-16px_hsl(var(--primary)/0.45)]",
+            "active:scale-90 active:shadow-glow"
           )}
           style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
         >
