@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Task, TaskCategory, TaskType } from "@/types/task";
+import { Task, TaskCategory, TaskType, TASK_COLORS } from "@/types/task";
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -29,6 +31,7 @@ export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
   const [category, setCategory] = useState<TaskCategory>(editTask?.taskCategory ?? "Work");
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategory, setCustomCategory] = useState("");
+  const [color, setColor] = useState<string>(editTask?.color ?? "");
 
   const reset = () => {
     setStep("choose");
@@ -38,6 +41,7 @@ export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
     setCategory("Work");
     setIsCustomCategory(false);
     setCustomCategory("");
+    setColor("");
   };
 
   const handleClose = () => {
@@ -56,6 +60,7 @@ export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
     onSave({
       type: taskType,
       description: description.trim(),
+      color: color || null,
       ...(taskType === "detailed" && { heading: heading.trim(), taskCategory: finalCategory || "Work" }),
     });
     handleClose();
@@ -67,6 +72,7 @@ export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
     setTaskType(editTask.type);
     setHeading(editTask.heading ?? "");
     setDescription(editTask.description);
+    setColor(editTask.color ?? "");
     const editCat = editTask.taskCategory ?? "Work";
     if (defaultCategories.includes(editCat)) {
       setCategory(editCat);
@@ -160,6 +166,30 @@ export function CreateTaskDialog({ open, onClose, onSave, editTask }: Props) {
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea id="description" placeholder="What do you need to do?" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+              </div>
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <div className="flex flex-wrap gap-2">
+                  {TASK_COLORS.map((c) => {
+                    const selected = color === c.value;
+                    return (
+                      <button
+                        key={c.name}
+                        type="button"
+                        aria-label={c.name}
+                        title={c.name}
+                        onClick={() => setColor(c.value)}
+                        className={cn(
+                          "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all",
+                          selected ? "border-primary scale-110" : "border-border hover:scale-105"
+                        )}
+                        style={{ background: c.value || "transparent" }}
+                      >
+                        {selected && <Check className="h-4 w-4 text-foreground/70" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             <DialogFooter>
