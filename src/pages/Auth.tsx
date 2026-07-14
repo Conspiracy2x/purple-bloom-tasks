@@ -7,6 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LogIn, UserPlus, Loader2, CheckCircle2 } from "lucide-react";
+import { z } from "zod";
+import { useTurnstile } from "@/hooks/useTurnstile";
+
+const emailSchema = z
+  .string()
+  .trim()
+  .min(1, "Email is required.")
+  .max(255, "Email is too long.")
+  .email("Please enter a valid email.");
+
+const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters.")
+  .max(72, "Password is too long.");
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -16,12 +30,13 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const turnstile = useTurnstile();
 
   const validate = () => {
-    if (!email.trim()) return "Email is required.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Please enter a valid email.";
-    if (!password) return "Password is required.";
-    if (password.length < 6) return "Password must be at least 6 characters.";
+    const e = emailSchema.safeParse(email);
+    if (!e.success) return e.error.issues[0].message;
+    const p = passwordSchema.safeParse(password);
+    if (!p.success) return p.error.issues[0].message;
     return null;
   };
 
@@ -38,6 +53,12 @@ export default function Auth() {
 
     setLoading(true);
     try {
+      const captchaOk = await turnstile.verify();
+      if (!captchaOk) {
+        setError(turnstile.error || "Please complete the security check.");
+        setLoading(false);
+        return;
+      }
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -53,6 +74,7 @@ export default function Auth() {
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
+      turnstile.reset();
     } finally {
       setLoading(false);
     }
@@ -118,14 +140,20 @@ export default function Auth() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={isLogin ? "current-password" : "new-password"}
                 className="h-11 rounded-xl bg-background/60"
+                maxLength={72}
               />
             </div>
+            <div
+              ref={turnstile.containerRef}
+              className="flex justify-center min-h-[65px]"
+              aria-label="Security check"
+            />
           </CardContent>
           <CardFooter className="flex-col gap-3 pb-8">
             <Button
               type="submit"
               className="w-full h-11 gap-2 rounded-xl bg-mint-gradient text-primary-foreground border-0 shadow-glow hover:opacity-95"
-              disabled={loading}
+              disabled={loading || !turnstile.ready}
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
