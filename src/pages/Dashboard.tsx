@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import gsap from "gsap";
+import { animateCount } from "@/lib/motion";
 import { useTaskManager } from "@/hooks/useTaskManager";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, CalendarCheck, Trophy, TrendingUp } from "lucide-react";
@@ -26,21 +26,10 @@ export default function Dashboard() {
 
   const numRefs = useRef<(HTMLSpanElement | null)[]>([]);
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      stats.forEach((s, i) => {
-        const el = numRefs.current[i];
-        if (!el) return;
-        const obj = { n: 0 };
-        gsap.to(obj, {
-          n: s.value,
-          duration: 1.1,
-          ease: "power3.out",
-          delay: i * 0.08,
-          onUpdate: () => (el.textContent = String(Math.round(obj.n))),
-        });
-      });
-    });
-    return () => ctx.revert();
+    const cleanups = stats.map((s, i) =>
+      animateCount(numRefs.current[i], s.value, { delay: i * 0.08 })
+    );
+    return () => cleanups.forEach((fn) => fn());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedToday, completedThisWeek, totalCompleted]);
 

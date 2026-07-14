@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import gsap from "gsap";
+import { animateCount } from "@/lib/motion";
 import { useTaskManager } from "@/hooks/useTaskManager";
 import { Task, TASK_COLORS } from "@/types/task";
 import { TaskCard } from "@/components/TaskCard";
@@ -38,25 +38,11 @@ export default function Tasks() {
 
   // GSAP: animated stat counters
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      const targets = [
-        { el: activeCountRef.current, val: activeTasks.length },
-        { el: doneCountRef.current, val: completedTasks.length },
-      ];
-      targets.forEach(({ el, val }) => {
-        if (!el) return;
-        const obj = { n: Number(el.textContent) || 0 };
-        gsap.to(obj, {
-          n: val,
-          duration: 0.9,
-          ease: "power3.out",
-          onUpdate: () => {
-            if (el) el.textContent = String(Math.round(obj.n));
-          },
-        });
-      });
-    });
-    return () => ctx.revert();
+    const cleanups = [
+      animateCount(activeCountRef.current, activeTasks.length),
+      animateCount(doneCountRef.current, completedTasks.length),
+    ];
+    return () => cleanups.forEach((fn) => fn());
   }, [activeTasks.length, completedTasks.length]);
 
   // Only show swatches that at least one task currently uses (plus "default" if any uncolored).
