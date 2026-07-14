@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { animateCount } from "@/lib/motion";
 import { useTaskManager } from "@/hooks/useTaskManager";
 import { Task, TASK_COLORS } from "@/types/task";
