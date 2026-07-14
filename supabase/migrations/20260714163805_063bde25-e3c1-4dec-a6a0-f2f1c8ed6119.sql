@@ -1,0 +1,1 @@
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS color TEXT; ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS position DOUBLE PRECISION NOT NULL DEFAULT 0; UPDATE public.tasks SET position = EXTRACT(EPOCH FROM created_at) WHERE position = 0;
