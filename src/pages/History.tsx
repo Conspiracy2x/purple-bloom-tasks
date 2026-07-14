@@ -20,25 +20,44 @@ export default function History() {
         <p className="py-12 text-center text-muted-foreground">No completed tasks yet.</p>
       ) : (
         <div className="space-y-3">
-          {sorted.map((t) => (
-            <Card key={t.id} className="transition-shadow hover:shadow-md">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant={t.type === "detailed" ? "default" : "secondary"} className="text-[10px]">
-                    {t.type === "detailed" ? "Detailed" : "Normal"}
-                  </Badge>
-                  {t.taskCategory && (
-                    <Badge variant="outline" className="text-[10px]">{t.taskCategory}</Badge>
+          {sorted.map((t) => {
+            const tint = t.color || undefined;
+            return (
+              <Card
+                key={t.id}
+                className="transition-shadow hover:shadow-md overflow-hidden"
+                style={tint ? { backgroundColor: tint, borderColor: tint } : undefined}
+              >
+                <CardContent className="p-4 flex gap-3">
+                  {tint && (
+                    <span
+                      aria-hidden
+                      className="w-1.5 shrink-0 rounded-full bg-black/25 self-stretch"
+                    />
                   )}
-                </div>
-                {t.heading && <h3 className="font-semibold text-sm">{t.heading}</h3>}
-                <p className="text-sm text-foreground/80 mt-0.5">{t.description}</p>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Completed {format(new Date(t.completedAt!), "MMM d, yyyy · h:mm a")}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <Badge variant={t.type === "detailed" ? "default" : "secondary"} className="text-[10px]">
+                        {t.type === "detailed" ? "Detailed" : "Normal"}
+                      </Badge>
+                      {t.taskCategory && (
+                        <Badge variant="outline" className="text-[10px]">{t.taskCategory}</Badge>
+                      )}
+                    </div>
+                    {t.heading && (
+                      <h3 className={`font-semibold text-sm ${tint ? "text-slate-900" : ""}`}>{t.heading}</h3>
+                    )}
+                    <p className={`text-sm mt-0.5 ${tint ? "text-slate-800" : "text-foreground/80"}`}>
+                      {t.description}
+                    </p>
+                    <p className={`text-[11px] mt-1 ${tint ? "text-slate-700/80" : "text-muted-foreground"}`}>
+                      Completed {format(new Date(t.completedAt!), "MMM d, yyyy · h:mm a")}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
