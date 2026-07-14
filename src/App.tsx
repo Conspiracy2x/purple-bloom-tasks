@@ -32,8 +32,8 @@ function ProtectedLayout() {
   }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full relative overflow-hidden">
+    <SidebarProvider defaultOpen={false}>
+      <div className="min-h-screen flex w-full relative overflow-x-hidden">
         {/* Ambient aurora background */}
         <div
           aria-hidden
@@ -48,7 +48,7 @@ function ProtectedLayout() {
           }}
         />
         <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 w-full">
           <header className="sticky top-0 z-30 h-14 flex items-center justify-between border-b border-border/60 bg-background/70 backdrop-blur-xl px-3 md:px-6">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="hover:bg-accent" />
@@ -61,7 +61,7 @@ function ProtectedLayout() {
               {new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
             </div>
           </header>
-          <main className="flex-1">
+          <main className="flex-1 min-w-0 w-full">
             <Routes>
               <Route path="/" element={<Tasks />} />
               <Route path="/dashboard" element={<Dashboard />} />
