@@ -22,9 +22,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setLoading(false);
+        // A password-recovery link creates a session and fires PASSWORD_RECOVERY.
+        // Force the user into the reset flow no matter which route they landed on.
+        if (event === "PASSWORD_RECOVERY" && window.location.pathname !== "/reset-password") {
+          window.location.replace("/reset-password");
+        }
       }
     );
 
