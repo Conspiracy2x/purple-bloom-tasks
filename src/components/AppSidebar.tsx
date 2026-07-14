@@ -1,5 +1,6 @@
 import { ListTodo, LayoutDashboard, History, LogOut, Moon, Sun, CheckCircle2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import {
@@ -28,6 +29,7 @@ export function AppSidebar() {
   const { signOut, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const collapsed = state === "collapsed";
+  const { pathname } = useLocation();
 
   const handleNavClick = () => {
     if (isMobile) setOpenMobile(false);
@@ -63,7 +65,9 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {items.map((item) => (
+              {items.map((item) => {
+                const isActive = pathname === item.url;
+                return (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild className="h-10 rounded-lg group">
                     <NavLink
@@ -73,23 +77,20 @@ export function AppSidebar() {
                       activeClassName="!bg-sidebar-accent text-primary font-semibold"
                       onClick={handleNavClick}
                     >
-                      {({ isActive }: { isActive: boolean }) => (
-                        <>
-                          {isActive && (
-                            <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-mint-gradient shadow-glow" />
-                          )}
-                          <item.icon
-                            className={`h-4 w-4 transition-transform group-hover:scale-110 ${
-                              isActive ? "text-primary" : ""
-                            }`}
-                          />
-                          {!collapsed && <span className="text-sm">{item.title}</span>}
-                        </>
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-mint-gradient shadow-glow" />
                       )}
+                      <item.icon
+                        className={`h-4 w-4 transition-transform group-hover:scale-110 ${
+                          isActive ? "text-primary" : ""
+                        }`}
+                      />
+                      {!collapsed && <span className="text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
