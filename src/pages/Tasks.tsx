@@ -312,22 +312,26 @@ export default function Tasks() {
         editTask={editingTask}
       />
 
-      {/* Floating action button — always reachable, especially on mobile */}
-      <button
-        type="button"
-        aria-label="Create new task"
-        onClick={() => { setEditingTask(null); setDialogOpen(true); }}
-        className={cn(
-          "sm:hidden fixed z-40 bottom-5 right-5",
-          "h-14 w-14 rounded-full bg-mint-gradient text-primary-foreground",
-          "grid place-items-center shadow-glow ring-1 ring-primary/40",
-          "active:scale-95 transition-transform duration-200 ease-out",
-          "animate-pulse-glow"
-        )}
-        style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
-      >
-        <Plus className="h-6 w-6" strokeWidth={2.5} />
-      </button>
+      {/* Floating action button — portaled to body so ancestor transforms
+          (from the sidebar wrapper) don't trap `position: fixed`. */}
+      {createPortal(
+        <button
+          type="button"
+          aria-label="Create new task"
+          onClick={() => { setEditingTask(null); setDialogOpen(true); }}
+          className={cn(
+            "sm:hidden fixed right-5 z-50",
+            "h-14 w-14 rounded-full bg-mint-gradient text-primary-foreground",
+            "grid place-items-center shadow-glow ring-1 ring-primary/40",
+            "active:scale-95 transition-transform duration-200 ease-out",
+            "animate-pulse-glow"
+          )}
+          style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
+        >
+          <Plus className="h-6 w-6" strokeWidth={2.5} />
+        </button>,
+        document.body
+      )}
     </div>
   );
 }
