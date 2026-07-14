@@ -1,0 +1,1 @@
+REVOKE SELECT ON public.tasks FROM anon;
