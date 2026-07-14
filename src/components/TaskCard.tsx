@@ -30,11 +30,21 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false }:
     ? {
         transform: CSS.Transform.toString(transform),
         transition,
-        zIndex: isDragging ? 50 : "auto",
       }
     : undefined;
 
   const tint = task.color || undefined;
+
+  if (sortable && isDragging) {
+    // Show a dashed placeholder at the current drop location; floating card is rendered via DragOverlay.
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="h-[92px] rounded-lg border-2 border-dashed border-primary/60 bg-primary/5"
+      />
+    );
+  }
 
   return (
     <motion.div
@@ -45,7 +55,6 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false }:
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
       transition={{ duration: 0.2 }}
-      className={isDragging ? "opacity-70 shadow-lg" : ""}
     >
       <Card
         className={`transition-all hover:shadow-md ${task.completed ? "opacity-60" : ""}`}
