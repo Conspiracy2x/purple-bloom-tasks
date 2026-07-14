@@ -32,7 +32,7 @@ function ProtectedLayout() {
   }
 
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full relative overflow-x-hidden">
         {/* Ambient aurora background */}
         <div
