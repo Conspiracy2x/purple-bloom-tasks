@@ -100,68 +100,66 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
             )}
           >
 
-            {typeof index === "number" && (
-              <div
-                className={cn(
-                  "mt-0.5 shrink-0 flex flex-col items-center justify-start pt-0.5 select-none",
-                  tint ? "text-slate-900" : "text-foreground"
-                )}
-              >
-                <span
-                  className={cn(
-                    "tabular text-[22px] leading-none font-semibold tracking-tight",
-                    tint ? "text-slate-900" : "text-mint-gradient"
-                  )}
-                >
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <span
-                  aria-hidden
-                  className={cn(
-                    "mt-1.5 h-[2px] w-4 rounded-full",
-                    tint ? "bg-slate-900/40" : "bg-mint-gradient opacity-70"
-                  )}
-                />
-              </div>
-            )}
-
-            <button
-              type="button"
-              aria-label={task.completed ? "Mark active" : "Mark complete"}
-              onClick={() => onToggle(task.id)}
-              className={cn(
-                "relative mt-0.5 h-9 w-9 sm:h-8 sm:w-8 shrink-0 rounded-full grid place-items-center transition-all duration-300",
-                "before:absolute before:inset-0 before:rounded-full before:transition-opacity before:duration-300",
-                task.completed
-                  ? "bg-mint-gradient text-primary-foreground shadow-glow scale-100"
-                  : tint
-                    ? "bg-white/40 ring-1 ring-inset ring-slate-900/25 hover:ring-slate-900/60 hover:bg-white/60 active:scale-95"
-                    : "bg-background/40 ring-1 ring-inset ring-border hover:ring-primary/70 hover:bg-primary/5 active:scale-95 before:opacity-0 hover:before:opacity-100 before:bg-[radial-gradient(closest-side,hsl(var(--primary)/0.18),transparent_70%)]"
-              )}
-            >
-              {task.completed ? (
-                <Undo2 className="relative h-4 w-4 sm:h-3.5 sm:w-3.5" />
-              ) : (
+            <div className="shrink-0 flex flex-col items-center gap-2 pt-0.5">
+              {typeof index === "number" && (
                 <>
-                  <span
-                    aria-hidden
+                  <div
                     className={cn(
-                      "absolute inset-[3px] rounded-full border border-dashed transition-all duration-500",
+                      "h-8 w-8 rounded-full border flex items-center justify-center text-sm font-semibold tabular tracking-tight",
                       tint
-                        ? "border-slate-900/25 group-hover:border-slate-900/50 group-hover:rotate-45"
-                        : "border-primary/30 group-hover:border-primary/70 group-hover:rotate-45"
+                        ? "bg-white/40 border-slate-900/20 text-slate-900"
+                        : "bg-primary/10 border-primary/20 text-mint-gradient"
                     )}
-                  />
-                  <Check
+                  >
+                    {String(index + 1).padStart(2, "0")}
+                  </div>
+                  <div
                     className={cn(
-                      "relative h-4 w-4 sm:h-3.5 sm:w-3.5 transition-all duration-200",
-                      "opacity-50 sm:opacity-0 sm:group-hover:opacity-100 group-hover:scale-110",
-                      tint ? "text-slate-900" : "text-primary"
+                      "h-3 w-px rounded-full",
+                      tint ? "bg-slate-900/25" : "bg-primary/25"
                     )}
                   />
                 </>
               )}
-            </button>
+
+              <button
+                type="button"
+                aria-label={task.completed ? "Mark active" : "Mark complete"}
+                onClick={() => onToggle(task.id)}
+                className={cn(
+                  "relative h-9 w-9 sm:h-8 sm:w-8 shrink-0 rounded-full grid place-items-center transition-all duration-300",
+                  "before:absolute before:inset-0 before:rounded-full before:transition-opacity before:duration-300",
+                  task.completed
+                    ? "bg-mint-gradient text-primary-foreground shadow-glow scale-100"
+                    : tint
+                      ? "bg-white/40 ring-1 ring-inset ring-slate-900/25 hover:ring-slate-900/60 hover:bg-white/60 active:scale-95"
+                      : "bg-background/40 ring-1 ring-inset ring-border hover:ring-primary/70 hover:bg-primary/5 active:scale-95 before:opacity-0 hover:before:opacity-100 before:bg-[radial-gradient(closest-side,hsl(var(--primary)/0.18),transparent_70%)]"
+                )}
+              >
+                {task.completed ? (
+                  <Undo2 className="relative h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                ) : (
+                  <>
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "absolute inset-[3px] rounded-full border border-dashed transition-all duration-500",
+                        tint
+                          ? "border-slate-900/25 group-hover:border-slate-900/50 group-hover:rotate-45"
+                          : "border-primary/30 group-hover:border-primary/70 group-hover:rotate-45"
+                      )}
+                    />
+                    <Check
+                      className={cn(
+                        "relative h-4 w-4 sm:h-3.5 sm:w-3.5 transition-all duration-200",
+                        "opacity-70 sm:opacity-0 sm:group-hover:opacity-100 group-hover:scale-110",
+                        tint ? "text-slate-900" : "text-primary"
+                      )}
+                    />
+                  </>
+                )}
+              </button>
+            </div>
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
