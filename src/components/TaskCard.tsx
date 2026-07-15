@@ -1,11 +1,10 @@
+import type { PointerEventHandler } from "react";
 import { Task } from "@/types/task";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Pencil, Trash2, Undo2, GripVertical } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
@@ -13,49 +12,58 @@ interface TaskCardProps {
   onToggle: (id: string) => void;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
-  sortable?: boolean;
   index?: number;
+  dragHandleProps?: {
+    onPointerDown: PointerEventHandler<HTMLButtonElement>;
+  };
+  isDragOverlay?: boolean;
+  isDragPlaceholder?: boolean;
+  dragPlaceholderHeight?: number;
 }
 
-export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, index }: TaskCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id, disabled: !sortable });
-
-  const style = sortable
-    ? {
-        transform: CSS.Transform.toString(transform),
-        transition: transition ?? "transform 220ms cubic-bezier(0.2, 0, 0, 1)",
-      }
-    : undefined;
-
+export function TaskCard({
+  task,
+  onToggle,
+  onEdit,
+  onDelete,
+  index,
+  dragHandleProps,
+  isDragOverlay = false,
+  isDragPlaceholder = false,
+  dragPlaceholderHeight,
+}: TaskCardProps) {
   const tint = task.color || undefined;
+  const canDrag = Boolean(dragHandleProps) && !task.completed;
 
-  const placeholder = sortable && isDragging;
+  if (isDragPlaceholder) {
+    return (
+      <motion.div
+        aria-hidden="true"
+        layout
+        className="relative overflow-hidden rounded-2xl border-2 border-dashed border-primary/55 bg-primary/[0.06] ring-mint"
+        style={{ height: dragPlaceholderHeight ?? 124 }}
+        transition={{ duration: 0.18 }}
+      >
+        <div className="absolute inset-x-5 top-1/2 h-px -translate-y-1/2 bg-primary/25" />
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
-      ref={sortable ? setNodeRef : undefined}
-      style={style}
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
+      layout={!isDragOverlay}
+      initial={isDragOverlay ? false : { opacity: 0, y: 12 }}
+      animate={isDragOverlay ? undefined : { opacity: 1, y: 0 }}
+      exit={isDragOverlay ? undefined : { opacity: 0, y: -12 }}
       transition={{ duration: 0.2 }}
+      className={cn(isDragOverlay && "pointer-events-none")}
     >
-      {placeholder ? (
-        <div className="h-[124px] rounded-2xl border-2 border-dashed border-primary/60 bg-primary/[0.06] ring-mint transition-colors" />
-      ) : (
         <Card
           className={cn(
             "relative overflow-hidden rounded-2xl border-border/60 glass shadow-card hover-lift group",
-            sortable && "pl-1 sm:pl-0",
-            task.completed && "opacity-60"
+            canDrag && "pl-1 sm:pl-0",
+            task.completed && "opacity-60",
+            isDragOverlay && "shadow-glow ring-2 ring-primary/45 rotate-1 scale-[1.015]"
           )}
           style={tint ? { backgroundColor: tint, borderColor: "transparent" } : undefined}
         >
@@ -70,7 +78,7 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
             />
           )}
 
-          {sortable && (
+          {canDrag && (
             <button
               type="button"
               aria-label="Drag to reorder"
@@ -82,8 +90,8 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
                   ? "text-slate-800/70 hover:bg-black/5 active:bg-black/10"
                   : "text-muted-foreground hover:text-primary hover:bg-primary/5 active:bg-primary/10"
               )}
-              {...attributes}
-              {...listeners}
+              onPointerDown={dragHandleProps?.onPointerDown}
+              onClick={(event) => event.preventDefault()}
             >
               <GripVertical className="h-4 w-4" />
             </button>
@@ -92,7 +100,7 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
           <CardContent
             className={cn(
               "relative flex items-stretch gap-0 p-0",
-              sortable && "pl-7 sm:pl-6"
+              canDrag && "pl-7 sm:pl-6"
             )}
           >
             {/* Left rail: large editorial numeral */}
@@ -275,7 +283,6 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
             </div>
           </CardContent>
         </Card>
-      )}
     </motion.div>
   );
 }
