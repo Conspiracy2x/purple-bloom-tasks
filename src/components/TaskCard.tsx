@@ -101,16 +101,28 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
           >
 
             {typeof index === "number" && (
-              <span
+              <div
                 className={cn(
-                  "mt-0.5 shrink-0 inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-1.5 text-xs font-semibold tabular",
-                  tint
-                    ? "bg-black/15 text-slate-900"
-                    : "bg-primary/10 text-primary ring-1 ring-primary/20"
+                  "mt-0.5 shrink-0 flex flex-col items-center justify-start pt-0.5 select-none",
+                  tint ? "text-slate-900" : "text-foreground"
                 )}
               >
-                {String(index + 1).padStart(2, "0")}
-              </span>
+                <span
+                  className={cn(
+                    "tabular text-[22px] leading-none font-semibold tracking-tight",
+                    tint ? "text-slate-900" : "text-mint-gradient"
+                  )}
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span
+                  aria-hidden
+                  className={cn(
+                    "mt-1.5 h-[2px] w-4 rounded-full",
+                    tint ? "bg-slate-900/40" : "bg-mint-gradient opacity-70"
+                  )}
+                />
+              </div>
             )}
 
             <button
@@ -118,18 +130,36 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
               aria-label={task.completed ? "Mark active" : "Mark complete"}
               onClick={() => onToggle(task.id)}
               className={cn(
-                "mt-0.5 h-8 w-8 sm:h-7 sm:w-7 shrink-0 rounded-full grid place-items-center transition-all",
+                "relative mt-0.5 h-9 w-9 sm:h-8 sm:w-8 shrink-0 rounded-full grid place-items-center transition-all duration-300",
+                "before:absolute before:inset-0 before:rounded-full before:transition-opacity before:duration-300",
                 task.completed
-                  ? "bg-mint-gradient text-primary-foreground shadow-glow"
+                  ? "bg-mint-gradient text-primary-foreground shadow-glow scale-100"
                   : tint
-                    ? "border-2 border-slate-900/30 hover:border-slate-900/60 hover:bg-black/5"
-                    : "border-2 border-border hover:border-primary hover:bg-primary/10"
+                    ? "bg-white/40 ring-1 ring-inset ring-slate-900/25 hover:ring-slate-900/60 hover:bg-white/60 active:scale-95"
+                    : "bg-background/40 ring-1 ring-inset ring-border hover:ring-primary/70 hover:bg-primary/5 active:scale-95 before:opacity-0 hover:before:opacity-100 before:bg-[radial-gradient(closest-side,hsl(var(--primary)/0.18),transparent_70%)]"
               )}
             >
               {task.completed ? (
-                <Undo2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                <Undo2 className="relative h-4 w-4 sm:h-3.5 sm:w-3.5" />
               ) : (
-                <Check className={cn("h-4 w-4 sm:h-3.5 sm:w-3.5 opacity-40 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity", tint ? "text-slate-900" : "text-primary")} />
+                <>
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute inset-[3px] rounded-full border border-dashed transition-all duration-500",
+                      tint
+                        ? "border-slate-900/25 group-hover:border-slate-900/50 group-hover:rotate-45"
+                        : "border-primary/30 group-hover:border-primary/70 group-hover:rotate-45"
+                    )}
+                  />
+                  <Check
+                    className={cn(
+                      "relative h-4 w-4 sm:h-3.5 sm:w-3.5 transition-all duration-200",
+                      "opacity-50 sm:opacity-0 sm:group-hover:opacity-100 group-hover:scale-110",
+                      tint ? "text-slate-900" : "text-primary"
+                    )}
+                  />
+                </>
               )}
             </button>
 
