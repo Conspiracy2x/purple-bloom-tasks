@@ -62,7 +62,7 @@ export default function Tasks() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 160, tolerance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -81,7 +81,13 @@ export default function Tasks() {
     reorderTasks(updates);
   };
 
-  const handleDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
+  const handleDragStart = (e: DragStartEvent) => {
+    setActiveId(String(e.active.id));
+    // Subtle haptic tick on touch devices to confirm pick-up.
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate?.(12);
+    }
+  };
   const handleDragCancel = () => setActiveId(null);
 
   const handleEdit = (task: Task) => {
@@ -247,6 +253,7 @@ export default function Tasks() {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
+            autoScroll={{ threshold: { x: 0, y: 0.15 }, acceleration: 12 }}
           >
             <SortableContext items={filteredActive.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2.5">
