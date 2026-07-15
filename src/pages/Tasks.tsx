@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { animateCount } from "@/lib/motion";
 import { useTaskManager } from "@/hooks/useTaskManager";
@@ -8,35 +9,41 @@ import { CreateTaskDialog } from "@/components/CreateTaskDialog";
 import { Button } from "@/components/ui/button";
 import { Plus, X, Filter, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getReorderedIdsForDrag, sameOrder } from "@/lib/dragReorder";
 import { AnimatePresence } from "framer-motion";
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  MouseSensor,
-  TouchSensor,
-  KeyboardSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+
+type DragSnapshot = {
+  id: string;
+  pointerId: number;
+  pointerY: number;
+  offsetY: number;
+  width: number;
+  height: number;
+  left: number;
+};
+
+type DragSurfaceStyles = {
+  bodyCursor: string;
+  bodyUserSelect: string;
+  bodyTouchAction: string;
+  rootOverscrollBehaviorY: string;
+};
 
 export default function Tasks() {
   const { activeTasks, completedTasks, addTask, updateTask, deleteTask, toggleComplete, reorderTasks } = useTaskManager();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [colorFilter, setColorFilter] = useState<string | null>(null);
+  const [orderedIds, setOrderedIds] = useState<string[]>([]);
+  const [dragSnapshot, setDragSnapshot] = useState<DragSnapshot | null>(null);
   const activeCountRef = useRef<HTMLSpanElement>(null);
   const doneCountRef = useRef<HTMLSpanElement>(null);
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const visualOrderRef = useRef<string[]>([]);
+  const filteredActiveIdsRef = useRef<string[]>([]);
+  const activeTasksRef = useRef<Task[]>([]);
+  const dragSnapshotRef = useRef<DragSnapshot | null>(null);
+  const dragSurfaceStylesRef = useRef<DragSurfaceStyles | null>(null);
 
   // GSAP: animated stat counters
   useEffect(() => {
@@ -54,46 +61,224 @@ export default function Tasks() {
     (v) => v && !TASK_COLORS.some((c) => c.value === v)
   );
 
-  const filteredActive =
-    colorFilter === null
-      ? activeTasks
-      : activeTasks.filter((t) => (t.color || "") === colorFilter);
-
-  const activeDragTask = activeId ? filteredActive.find((t) => t.id === activeId) ?? null : null;
-
-  const sensors = useSensors(
-    // Mouse: tiny distance so click-vs-drag stays sharp on desktop.
-    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
-    // Touch: distance-based (not delay) since the grip handle is `touch-none`,
-    // so grabbing it never competes with page scroll. This makes drags feel
-    // instant on mobile instead of the old 120ms long-press pause.
-    useSensor(TouchSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  const filteredActive = useMemo(
+    () =>
+      colorFilter === null
+        ? activeTasks
+        : activeTasks.filter((t) => (t.color || "") === colorFilter),
+    [activeTasks, colorFilter]
   );
 
-  const handleDragEnd = (e: DragEndEvent) => {
-    const { active, over } = e;
-    setActiveId(null);
-    if (!over || active.id === over.id) return;
-    // Reorder using the full active list so positions stay consistent even when filtered.
-    const oldIndex = activeTasks.findIndex((t) => t.id === active.id);
-    const overInFull = activeTasks.findIndex((t) => t.id === over.id);
-    const newIndex = overInFull;
-    if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(activeTasks, oldIndex, newIndex);
-    // Assign evenly spaced positions
-    const updates = reordered.map((t, i) => ({ id: t.id, position: i }));
-    reorderTasks(updates);
-  };
+  const filteredActiveIds = useMemo(() => filteredActive.map((task) => task.id), [filteredActive]);
 
-  const handleDragStart = (e: DragStartEvent) => {
-    setActiveId(String(e.active.id));
-    // Subtle haptic tick on touch devices to confirm pick-up.
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate?.(12);
+  const filteredTaskById = useMemo(
+    () => new Map(filteredActive.map((task) => [task.id, task])),
+    [filteredActive]
+  );
+
+  const visibleTasks = useMemo(() => {
+    const ids = orderedIds.length > 0 ? orderedIds : filteredActiveIds;
+    return ids
+      .map((id) => filteredTaskById.get(id))
+      .filter((task): task is Task => Boolean(task));
+  }, [filteredActiveIds, filteredTaskById, orderedIds]);
+
+  const activeId = dragSnapshot?.id ?? null;
+  const activeDragTask = activeId ? filteredTaskById.get(activeId) ?? null : null;
+  const canReorder = colorFilter === null && filteredActive.length > 1;
+
+  useEffect(() => {
+    activeTasksRef.current = activeTasks;
+  }, [activeTasks]);
+
+  useEffect(() => {
+    filteredActiveIdsRef.current = filteredActiveIds;
+    if (!dragSnapshot) {
+      visualOrderRef.current = filteredActiveIds;
+      setOrderedIds(filteredActiveIds);
+    }
+  }, [dragSnapshot, filteredActiveIds]);
+
+  useEffect(() => {
+    visualOrderRef.current = orderedIds;
+  }, [orderedIds]);
+
+  useEffect(() => {
+    dragSnapshotRef.current = dragSnapshot;
+  }, [dragSnapshot]);
+
+  const restoreDragSurface = useCallback(() => {
+    if (typeof document === "undefined" || !dragSurfaceStylesRef.current) return;
+
+    document.body.style.cursor = dragSurfaceStylesRef.current.bodyCursor;
+    document.body.style.userSelect = dragSurfaceStylesRef.current.bodyUserSelect;
+    document.body.style.touchAction = dragSurfaceStylesRef.current.bodyTouchAction;
+    document.documentElement.style.overscrollBehaviorY = dragSurfaceStylesRef.current.rootOverscrollBehaviorY;
+    dragSurfaceStylesRef.current = null;
+  }, []);
+
+  const applyDragSurface = useCallback(() => {
+    if (typeof document === "undefined" || dragSurfaceStylesRef.current) return;
+
+    dragSurfaceStylesRef.current = {
+      bodyCursor: document.body.style.cursor,
+      bodyUserSelect: document.body.style.userSelect,
+      bodyTouchAction: document.body.style.touchAction,
+      rootOverscrollBehaviorY: document.documentElement.style.overscrollBehaviorY,
+    };
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
+    document.body.style.touchAction = "none";
+    document.documentElement.style.overscrollBehaviorY = "contain";
+  }, []);
+
+  const reorderPreviewForPointer = useCallback((clientY: number) => {
+    const snapshot = dragSnapshotRef.current;
+    if (!snapshot) return;
+
+    const currentOrder = visualOrderRef.current.length > 0
+      ? visualOrderRef.current
+      : filteredActiveIdsRef.current;
+    if (currentOrder.length < 2) return;
+
+    const draggedCenter = clientY - snapshot.offsetY + snapshot.height / 2;
+    const itemBounds = currentOrder.flatMap((id) => {
+      if (id === snapshot.id) return [];
+      const item = itemRefs.current.get(id);
+      if (!item) return [];
+
+      const rect = item.getBoundingClientRect();
+      return [{ id, top: rect.top, height: rect.height }];
+    });
+    const nextOrder = getReorderedIdsForDrag(currentOrder, snapshot.id, draggedCenter, itemBounds);
+
+    if (!sameOrder(currentOrder, nextOrder)) {
+      visualOrderRef.current = nextOrder;
+      setOrderedIds(nextOrder);
+    }
+  }, []);
+
+  const finishDrag = useCallback((commit: boolean) => {
+    const snapshot = dragSnapshotRef.current;
+    if (!snapshot) return;
+
+    const finalOrder = visualOrderRef.current;
+    const currentActiveOrder = activeTasksRef.current.map((task) => task.id);
+
+    if (commit && finalOrder.length === currentActiveOrder.length && !sameOrder(finalOrder, currentActiveOrder)) {
+      reorderTasks(finalOrder.map((id, position) => ({ id, position })));
+    }
+
+    setDragSnapshot(null);
+    dragSnapshotRef.current = null;
+    restoreDragSurface();
+  }, [reorderTasks, restoreDragSurface]);
+
+  useEffect(() => {
+    if (!dragSnapshot) return;
+
+    const pointerId = dragSnapshot.pointerId;
+    let animationFrame = 0;
+    let latestClientY = dragSnapshot.pointerY;
+
+    const updateDrag = () => {
+      animationFrame = 0;
+      setDragSnapshot((current) => current ? { ...current, pointerY: latestClientY } : current);
+      reorderPreviewForPointer(latestClientY);
+
+      const edge = 96;
+      const maxStep = 18;
+      if (latestClientY < edge) {
+        window.scrollBy({ top: -Math.ceil(((edge - latestClientY) / edge) * maxStep), behavior: "instant" });
+        reorderPreviewForPointer(latestClientY);
+      } else if (latestClientY > window.innerHeight - edge) {
+        window.scrollBy({ top: Math.ceil(((latestClientY - (window.innerHeight - edge)) / edge) * maxStep), behavior: "instant" });
+        reorderPreviewForPointer(latestClientY);
+      }
+    };
+
+    const requestDragUpdate = () => {
+      if (animationFrame) return;
+      animationFrame = window.requestAnimationFrame(updateDrag);
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (event.pointerId !== pointerId) return;
+      event.preventDefault();
+      latestClientY = event.clientY;
+      requestDragUpdate();
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      if (event.pointerId !== pointerId) return;
+      event.preventDefault();
+      finishDrag(true);
+    };
+
+    const handlePointerCancel = (event: PointerEvent) => {
+      if (event.pointerId !== pointerId) return;
+      finishDrag(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") finishDrag(false);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: false });
+    window.addEventListener("pointerup", handlePointerUp, { passive: false });
+    window.addEventListener("pointercancel", handlePointerCancel);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [dragSnapshot, finishDrag, reorderPreviewForPointer]);
+
+  useEffect(() => restoreDragSurface, [restoreDragSurface]);
+
+  const registerTaskItem = (id: string) => (node: HTMLDivElement | null) => {
+    if (node) {
+      itemRefs.current.set(id, node);
+    } else {
+      itemRefs.current.delete(id);
     }
   };
-  const handleDragCancel = () => setActiveId(null);
+
+  const startDrag = (taskId: string, event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!canReorder || (event.pointerType === "mouse" && event.button !== 0)) return;
+
+    const item = itemRefs.current.get(taskId);
+    if (!item) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const rect = item.getBoundingClientRect();
+    const snapshot: DragSnapshot = {
+      id: taskId,
+      pointerId: event.pointerId,
+      pointerY: event.clientY,
+      offsetY: event.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
+      left: rect.left,
+    };
+
+    filteredActiveIdsRef.current = filteredActiveIds;
+    visualOrderRef.current = filteredActiveIds;
+    setOrderedIds(filteredActiveIds);
+    applyDragSurface();
+    setDragSnapshot(snapshot);
+    dragSnapshotRef.current = snapshot;
+
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate?.(10);
+    }
+  };
 
   const handleEdit = (task: Task) => {
     setEditingTask(task);
@@ -252,51 +437,61 @@ export default function Tasks() {
         ) : filteredActive.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">No tasks match this color.</p>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-            modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-            autoScroll={{ threshold: { x: 0, y: 0.2 }, acceleration: 14 }}
-          >
-            <SortableContext items={filteredActive.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2.5">
-                <AnimatePresence mode="popLayout">
-                  {filteredActive.map((t, i) => (
-                    <TaskCard
-                      key={t.id}
-                      task={t}
-                      index={i}
-                      onToggle={toggleComplete}
-                      onEdit={handleEdit}
-                      onDelete={deleteTask}
-                      sortable={colorFilter === null}
-                    />
-                  ))}
-                </AnimatePresence>
-              </div>
-            </SortableContext>
-            <DragOverlay
-              dropAnimation={{
-                duration: 240,
-                easing: "cubic-bezier(0.2, 0, 0, 1)",
-              }}
-            >
-              {activeDragTask ? (
-                <div className="rotate-1 scale-[1.03] shadow-glow ring-2 ring-primary/60 rounded-2xl">
-                  <TaskCard
-                    task={activeDragTask}
-                    index={filteredActive.findIndex((t) => t.id === activeDragTask.id)}
-                    onToggle={() => {}}
-                    onEdit={() => {}}
-                    onDelete={() => {}}
-                  />
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
+          <>
+            <div className="space-y-2.5">
+              <AnimatePresence mode="popLayout">
+                {visibleTasks.map((task, index) => {
+                  const isActive = task.id === activeId;
+                  return (
+                    <div
+                      key={task.id}
+                      ref={registerTaskItem(task.id)}
+                      className={cn(
+                        "touch-pan-y",
+                        isActive && "pointer-events-none"
+                      )}
+                    >
+                      <TaskCard
+                        task={task}
+                        index={index}
+                        onToggle={toggleComplete}
+                        onEdit={handleEdit}
+                        onDelete={deleteTask}
+                        dragHandleProps={
+                          canReorder
+                            ? { onPointerDown: (event) => startDrag(task.id, event) }
+                            : undefined
+                        }
+                        isDragPlaceholder={isActive}
+                        dragPlaceholderHeight={dragSnapshot?.height}
+                      />
+                    </div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+
+            {dragSnapshot && activeDragTask && createPortal(
+              <div
+                className="fixed z-[90] pointer-events-none"
+                style={{
+                  top: dragSnapshot.pointerY - dragSnapshot.offsetY,
+                  left: dragSnapshot.left,
+                  width: dragSnapshot.width,
+                }}
+              >
+                <TaskCard
+                  task={activeDragTask}
+                  index={visibleTasks.findIndex((task) => task.id === activeDragTask.id)}
+                  onToggle={() => {}}
+                  onEdit={() => {}}
+                  onDelete={() => {}}
+                  isDragOverlay
+                />
+              </div>,
+              document.body
+            )}
+          </>
         )}
       </section>
 
