@@ -13,7 +13,6 @@ import History from "@/pages/History";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
-import TaskDemo from "@/pages/TaskDemo";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
