@@ -38,7 +38,6 @@ export default function Tasks() {
   const [dragSnapshot, setDragSnapshot] = useState<DragSnapshot | null>(null);
   const activeCountRef = useRef<HTMLSpanElement>(null);
   const doneCountRef = useRef<HTMLSpanElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const visualOrderRef = useRef<string[]>([]);
   const filteredActiveIdsRef = useRef<string[]>([]);
@@ -440,7 +439,7 @@ export default function Tasks() {
           <p className="py-12 text-center text-sm text-muted-foreground">No tasks match this color.</p>
         ) : (
           <>
-            <div ref={listRef} className="space-y-2.5">
+            <div className="space-y-2.5">
               <AnimatePresence mode="popLayout">
                 {visibleTasks.map((task, index) => {
                   const isActive = task.id === activeId;
