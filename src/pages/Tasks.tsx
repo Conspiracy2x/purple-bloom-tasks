@@ -478,7 +478,7 @@ export default function Tasks() {
         ) : (
           <>
             <div className="space-y-2.5">
-              <AnimatePresence mode="popLayout">
+              <AnimatePresence>
                 {visibleTasks.map((task, index) => {
                   const isActive = task.id === activeId;
                   return (
@@ -547,7 +547,7 @@ export default function Tasks() {
             <div className="h-px flex-1 bg-border/60" />
           </div>
           <div className="space-y-2.5">
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence>
               {completedTasks.slice(0, 5).map((t, i) => (
                 <TaskCard key={t.id} task={t} index={i} onToggle={toggleComplete} onEdit={handleEdit} onDelete={deleteTask} />
               ))}
