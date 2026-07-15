@@ -77,14 +77,14 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
                 type="button"
                 aria-label="Drag to reorder"
                 className={cn(
-                  "mt-1.5 -ml-1 shrink-0 touch-none cursor-grab active:cursor-grabbing rounded-md p-1 transition-colors",
+                  "mt-0.5 -ml-1.5 shrink-0 touch-none cursor-grab active:cursor-grabbing rounded-lg p-2 sm:p-1 -my-1 transition-colors select-none",
                   tint ? "text-slate-800/60 hover:text-slate-900 hover:bg-black/10"
                        : "text-muted-foreground/60 hover:text-primary hover:bg-primary/10"
                 )}
                 {...attributes}
                 {...listeners}
               >
-                <GripVertical className="h-4 w-4" />
+                <GripVertical className="h-5 w-5 sm:h-4 sm:w-4" />
               </button>
             )}
 
