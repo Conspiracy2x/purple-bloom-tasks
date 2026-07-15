@@ -108,11 +108,13 @@ export function useTaskManager() {
 
   const reorderTasksMutation = useMutation({
     mutationFn: async (updates: { id: string; position: number }[]) => {
-      await Promise.all(
+      const results = await Promise.all(
         updates.map((u) =>
           supabase.from("tasks").update({ position: u.position }).eq("id", u.id)
         )
       );
+      const failedUpdate = results.find(({ error }) => error);
+      if (failedUpdate?.error) throw failedUpdate.error;
     },
     onMutate: async (updates) => {
       await qc.cancelQueries({ queryKey });
