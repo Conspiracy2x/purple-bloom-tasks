@@ -256,7 +256,6 @@ export default function Tasks() {
 
     event.preventDefault();
     event.stopPropagation();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
 
     const rect = item.getBoundingClientRect();
     const snapshot: DragSnapshot = {
