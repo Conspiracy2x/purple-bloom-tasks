@@ -448,51 +448,61 @@ export default function Tasks() {
         ) : filteredActive.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">No tasks match this color.</p>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-            modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-            autoScroll={{ threshold: { x: 0, y: 0.2 }, acceleration: 14 }}
-          >
-            <SortableContext items={filteredActive.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2.5">
-                <AnimatePresence mode="popLayout">
-                  {filteredActive.map((t, i) => (
-                    <TaskCard
-                      key={t.id}
-                      task={t}
-                      index={i}
-                      onToggle={toggleComplete}
-                      onEdit={handleEdit}
-                      onDelete={deleteTask}
-                      sortable={colorFilter === null}
-                    />
-                  ))}
-                </AnimatePresence>
-              </div>
-            </SortableContext>
-            <DragOverlay
-              dropAnimation={{
-                duration: 240,
-                easing: "cubic-bezier(0.2, 0, 0, 1)",
-              }}
-            >
-              {activeDragTask ? (
-                <div className="rotate-1 scale-[1.03] shadow-glow ring-2 ring-primary/60 rounded-2xl">
-                  <TaskCard
-                    task={activeDragTask}
-                    index={filteredActive.findIndex((t) => t.id === activeDragTask.id)}
-                    onToggle={() => {}}
-                    onEdit={() => {}}
-                    onDelete={() => {}}
-                  />
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
+          <>
+            <div ref={listRef} className="space-y-2.5">
+              <AnimatePresence mode="popLayout">
+                {visibleTasks.map((task, index) => {
+                  const isActive = task.id === activeId;
+                  return (
+                    <div
+                      key={task.id}
+                      ref={registerTaskItem(task.id)}
+                      className={cn(
+                        "touch-pan-y",
+                        isActive && "pointer-events-none"
+                      )}
+                    >
+                      <TaskCard
+                        task={task}
+                        index={index}
+                        onToggle={toggleComplete}
+                        onEdit={handleEdit}
+                        onDelete={deleteTask}
+                        dragHandleProps={
+                          canReorder
+                            ? { onPointerDown: (event) => startDrag(task.id, event) }
+                            : undefined
+                        }
+                        isDragPlaceholder={isActive}
+                        dragPlaceholderHeight={dragSnapshot?.height}
+                      />
+                    </div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+
+            {dragSnapshot && activeDragTask && createPortal(
+              <div
+                className="fixed z-[90] pointer-events-none"
+                style={{
+                  top: dragSnapshot.pointerY - dragSnapshot.offsetY,
+                  left: dragSnapshot.left,
+                  width: dragSnapshot.width,
+                }}
+              >
+                <TaskCard
+                  task={activeDragTask}
+                  index={visibleTasks.findIndex((task) => task.id === activeDragTask.id)}
+                  onToggle={() => {}}
+                  onEdit={() => {}}
+                  onDelete={() => {}}
+                  isDragOverlay
+                />
+              </div>,
+              document.body
+            )}
+          </>
         )}
       </section>
 
