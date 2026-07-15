@@ -83,7 +83,7 @@ export function TaskCard({
               type="button"
               aria-label="Drag to reorder"
               className={cn(
-                "absolute inset-y-0 left-0 z-10 flex w-7 sm:w-6 items-center justify-center",
+                "absolute inset-y-0 left-0 z-10 flex w-6 items-center justify-center",
                 "touch-none select-none cursor-grab active:cursor-grabbing",
                 "transition-colors opacity-60 hover:opacity-100",
                 tint
@@ -103,8 +103,8 @@ export function TaskCard({
 
           <CardContent
             className={cn(
-              "relative flex items-stretch gap-0 p-0 touch-none select-none cursor-grab active:cursor-grabbing",
-              canDrag && "pl-7 sm:pl-6"
+              "relative flex items-stretch gap-0 p-0 touch-pan-y select-none md:cursor-grab md:active:cursor-grabbing",
+              canDrag && "pl-6"
             )}
             onPointerDown={canDrag ? dragHandleProps.onPointerDown : undefined}
           >
@@ -112,7 +112,7 @@ export function TaskCard({
             {typeof index === "number" && (
               <div
                 className={cn(
-                  "shrink-0 flex flex-col items-center justify-center px-3 sm:px-4 py-4 sm:py-5",
+                  "shrink-0 flex flex-col items-center justify-center px-2 sm:px-4 py-4 sm:py-5",
                   "border-r border-dashed",
                   tint ? "border-slate-900/15" : "border-border/70"
                 )}
