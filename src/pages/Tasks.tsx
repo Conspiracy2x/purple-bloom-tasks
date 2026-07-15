@@ -479,6 +479,7 @@ export default function Tasks() {
                       ref={registerTaskItem(task.id)}
                       data-task-card="true"
                       data-task-id={task.id}
+                      onPointerDown={canReorder ? (event) => startPointerDrag(task.id, event) : undefined}
                       className={cn(
                         "touch-pan-y",
                         isActive && "pointer-events-none"
