@@ -132,6 +132,14 @@ export default function Tasks() {
     document.documentElement.style.overscrollBehaviorY = "contain";
   }, []);
 
+  const getTaskElement = useCallback((id: string) => {
+    const refNode = itemRefs.current.get(id);
+    if (refNode) return refNode;
+
+    if (typeof document === "undefined") return null;
+    return document.querySelector<HTMLDivElement>(`[data-task-id="${id}"]`);
+  }, []);
+
   const reorderPreviewForPointer = useCallback((clientY: number) => {
     const snapshot = dragSnapshotRef.current;
     if (!snapshot) return;
@@ -144,7 +152,7 @@ export default function Tasks() {
     const draggedCenter = clientY - snapshot.offsetY + snapshot.height / 2;
     const itemBounds = currentOrder.flatMap((id) => {
       if (id === snapshot.id) return [];
-      const item = itemRefs.current.get(id);
+      const item = getTaskElement(id);
       if (!item) return [];
 
       const rect = item.getBoundingClientRect();
@@ -156,7 +164,7 @@ export default function Tasks() {
       visualOrderRef.current = nextOrder;
       setOrderedIds(nextOrder);
     }
-  }, []);
+  }, [getTaskElement]);
 
   const finishDrag = useCallback((commit: boolean) => {
     const snapshot = dragSnapshotRef.current;
@@ -264,9 +272,8 @@ export default function Tasks() {
     }
   };
 
-  const beginDrag = (taskId: string, clientY: number, pointerId: number) => {
-    console.log("[drag-debug] beginDrag", { taskId, clientY, pointerId, canReorder, hasItem: itemRefs.current.has(taskId) });
-    const item = itemRefs.current.get(taskId);
+  const beginDrag = (taskId: string, clientY: number, pointerId: number, sourceElement?: HTMLElement | null) => {
+    const item = sourceElement?.closest<HTMLDivElement>("[data-task-card='true']") ?? getTaskElement(taskId);
     if (!canReorder || !item) return;
 
     const rect = item.getBoundingClientRect();
@@ -309,46 +316,8 @@ export default function Tasks() {
       // Window-level listeners below keep the drag alive if capture is unavailable.
     }
 
-    beginDrag(taskId, event.clientY, event.pointerId);
+    beginDrag(taskId, event.clientY, event.pointerId, event.currentTarget);
   };
-
-  useEffect(() => {
-    if (!canReorder) return;
-
-    const cleanups = visibleTasks.map((task) => {
-      const node = itemRefs.current.get(task.id);
-      if (!node) return null;
-
-      const handlePointerDown = (event: PointerEvent) => {
-        console.log("[drag-debug] native pointerdown", { taskId: task.id, button: event.button, isPrimary: event.isPrimary, target: (event.target as HTMLElement | null)?.tagName });
-        if (event.button !== 0 || event.isPrimary === false) return;
-
-        const target = event.target as HTMLElement | null;
-        const startedOnHandle = Boolean(target?.closest("[data-drag-handle='true']"));
-        const startedOnControl = Boolean(target?.closest("button,a,input,textarea,select,[role='button'],[data-no-drag='true']"));
-        console.log("[drag-debug] guards", { startedOnHandle, startedOnControl });
-        if (!startedOnHandle && startedOnControl) return;
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        try {
-          node.setPointerCapture(event.pointerId);
-        } catch {
-          // Window-level listeners keep the drag alive if capture is unavailable.
-        }
-
-        beginDrag(task.id, event.clientY, event.pointerId);
-      };
-
-      node.addEventListener("pointerdown", handlePointerDown, { capture: true, passive: false });
-      return () => node.removeEventListener("pointerdown", handlePointerDown, { capture: true });
-    });
-
-    return () => {
-      cleanups.forEach((cleanup) => cleanup?.());
-    };
-  }, [canReorder, visibleTasks, filteredActiveIds]);
 
   const handleEdit = (task: Task) => {
     setEditingTask(task);
