@@ -37,10 +37,10 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border/60">
-      <SidebarHeader className="px-3 pt-4 pb-2">
-        <div className="flex items-center gap-2.5">
-          <div className="relative shrink-0">
-            <div className="h-9 w-9 rounded-xl bg-mint-gradient grid place-items-center shadow-glow">
+      <SidebarHeader className="px-3 pt-4 pb-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:items-center">
+        <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
+          <div className="relative shrink-0 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8">
+            <div className="h-9 w-9 rounded-xl bg-mint-gradient grid place-items-center shadow-glow group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:rounded-lg">
               <CheckCircle2 className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
             </div>
             <div className="absolute inset-0 rounded-xl bg-primary/30 blur-md -z-10" />
@@ -59,7 +59,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2">
-        <SidebarGroup>
+        <SidebarGroup className="group-data-[collapsible=icon]:px-0">
           <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
             {!collapsed && "Workspace"}
           </SidebarGroupLabel>
@@ -69,16 +69,16 @@ export function AppSidebar() {
                 const isActive = pathname === item.url;
                 return (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="h-10 rounded-lg group">
+                  <SidebarMenuButton asChild tooltip={item.title} className="h-10 rounded-lg group/menuitem group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center">
                     <NavLink
                       to={item.url}
                       end
-                      className="relative flex items-center gap-3 px-3 hover:bg-sidebar-accent/70 transition-colors"
+                      className="relative flex items-center gap-3 px-3 hover:bg-sidebar-accent/70 transition-colors group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                       activeClassName="!bg-sidebar-accent text-primary font-semibold"
                       onClick={handleNavClick}
                     >
                       {isActive && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-mint-gradient shadow-glow" />
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-mint-gradient shadow-glow group-data-[collapsible=icon]:hidden" />
                       )}
                       <item.icon
                         className={`h-4 w-4 transition-transform group-hover:scale-110 ${
@@ -96,12 +96,13 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-3 space-y-2">
+      <SidebarFooter className="p-3 space-y-2 group-data-[collapsible=icon]:p-1.5">
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-2 h-9 rounded-lg hover:bg-sidebar-accent/70"
+          className="w-full justify-start gap-2 h-9 rounded-lg hover:bg-sidebar-accent/70 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           onClick={toggleTheme}
+          aria-label="Toggle theme"
         >
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           {!collapsed && <span className="text-sm">{theme === "dark" ? "Light" : "Dark"} mode</span>}
