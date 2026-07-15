@@ -1,4 +1,4 @@
-import type { PointerEventHandler } from "react";
+import type { MouseEventHandler, TouchEventHandler } from "react";
 import { Task } from "@/types/task";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,8 @@ interface TaskCardProps {
   onDelete: (id: string) => void;
   index?: number;
   dragHandleProps?: {
-    onPointerDown: PointerEventHandler<HTMLButtonElement>;
+    onMouseDown: MouseEventHandler<HTMLButtonElement>;
+    onTouchStart: TouchEventHandler<HTMLButtonElement>;
   };
   isDragOverlay?: boolean;
   isDragPlaceholder?: boolean;
@@ -90,8 +91,12 @@ export function TaskCard({
                   ? "text-slate-800/70 hover:bg-black/5 active:bg-black/10"
                   : "text-muted-foreground hover:text-primary hover:bg-primary/5 active:bg-primary/10"
               )}
-              onPointerDown={dragHandleProps?.onPointerDown}
+              style={{ touchAction: "none" }}
+              draggable={false}
+              onMouseDown={dragHandleProps.onMouseDown}
+              onTouchStart={dragHandleProps.onTouchStart}
               onClick={(event) => event.preventDefault()}
+              onContextMenu={(event) => event.preventDefault()}
             >
               <GripVertical className="h-4 w-4" />
             </button>
