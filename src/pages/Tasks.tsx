@@ -9,6 +9,7 @@ import { CreateTaskDialog } from "@/components/CreateTaskDialog";
 import { Button } from "@/components/ui/button";
 import { Plus, X, Filter, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getReorderedIdsForDrag, sameOrder } from "@/lib/dragReorder";
 import { AnimatePresence } from "framer-motion";
 
 type DragSnapshot = {
@@ -27,9 +28,6 @@ type DragSurfaceStyles = {
   bodyTouchAction: string;
   rootOverscrollBehaviorY: string;
 };
-
-const sameOrder = (a: string[], b: string[]) =>
-  a.length === b.length && a.every((id, index) => id === b[index]);
 
 export default function Tasks() {
   const { activeTasks, completedTasks, addTask, updateTask, deleteTask, toggleComplete, reorderTasks } = useTaskManager();
@@ -145,22 +143,15 @@ export default function Tasks() {
     if (currentOrder.length < 2) return;
 
     const draggedCenter = clientY - snapshot.offsetY + snapshot.height / 2;
-    const orderWithoutDragged = currentOrder.filter((id) => id !== snapshot.id);
-    let insertionIndex = orderWithoutDragged.length;
-
-    for (let index = 0; index < orderWithoutDragged.length; index += 1) {
-      const item = itemRefs.current.get(orderWithoutDragged[index]);
+    const itemBounds = currentOrder.flatMap((id) => {
+      if (id === snapshot.id) return [];
+      const item = itemRefs.current.get(id);
       if (!item) continue;
 
       const rect = item.getBoundingClientRect();
-      if (draggedCenter < rect.top + rect.height / 2) {
-        insertionIndex = index;
-        break;
-      }
-    }
-
-    const nextOrder = [...orderWithoutDragged];
-    nextOrder.splice(insertionIndex, 0, snapshot.id);
+      return [{ id, top: rect.top, height: rect.height }];
+    });
+    const nextOrder = getReorderedIdsForDrag(currentOrder, snapshot.id, draggedCenter, itemBounds);
 
     if (!sameOrder(currentOrder, nextOrder)) {
       visualOrderRef.current = nextOrder;
