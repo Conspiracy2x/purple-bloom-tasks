@@ -95,7 +95,7 @@ export default function Tasks() {
     filteredActiveIdsRef.current = filteredActiveIds;
     if (!dragSnapshot) {
       visualOrderRef.current = filteredActiveIds;
-      setOrderedIds(filteredActiveIds);
+      setOrderedIds((current) => sameOrder(current, filteredActiveIds) ? current : filteredActiveIds);
     }
   }, [dragSnapshot, filteredActiveIds]);
 
@@ -132,6 +132,14 @@ export default function Tasks() {
     document.documentElement.style.overscrollBehaviorY = "contain";
   }, []);
 
+  const getTaskElement = useCallback((id: string) => {
+    const refNode = itemRefs.current.get(id);
+    if (refNode) return refNode;
+
+    if (typeof document === "undefined") return null;
+    return document.querySelector<HTMLDivElement>(`[data-task-id="${id}"]`);
+  }, []);
+
   const reorderPreviewForPointer = useCallback((clientY: number) => {
     const snapshot = dragSnapshotRef.current;
     if (!snapshot) return;
@@ -144,7 +152,7 @@ export default function Tasks() {
     const draggedCenter = clientY - snapshot.offsetY + snapshot.height / 2;
     const itemBounds = currentOrder.flatMap((id) => {
       if (id === snapshot.id) return [];
-      const item = itemRefs.current.get(id);
+      const item = getTaskElement(id);
       if (!item) return [];
 
       const rect = item.getBoundingClientRect();
@@ -156,7 +164,7 @@ export default function Tasks() {
       visualOrderRef.current = nextOrder;
       setOrderedIds(nextOrder);
     }
-  }, []);
+  }, [getTaskElement]);
 
   const finishDrag = useCallback((commit: boolean) => {
     const snapshot = dragSnapshotRef.current;
@@ -264,8 +272,8 @@ export default function Tasks() {
     }
   };
 
-  const beginDrag = (taskId: string, clientY: number, pointerId: number) => {
-    const item = itemRefs.current.get(taskId);
+  const beginDrag = (taskId: string, clientY: number, pointerId: number, sourceElement?: HTMLElement | null) => {
+    const item = sourceElement?.closest<HTMLDivElement>("[data-task-card='true']") ?? getTaskElement(taskId);
     if (!canReorder || !item) return;
 
     const rect = item.getBoundingClientRect();
@@ -308,7 +316,7 @@ export default function Tasks() {
       // Window-level listeners below keep the drag alive if capture is unavailable.
     }
 
-    beginDrag(taskId, event.clientY, event.pointerId);
+    beginDrag(taskId, event.clientY, event.pointerId, event.currentTarget);
   };
 
   const handleEdit = (task: Task) => {
@@ -470,13 +478,15 @@ export default function Tasks() {
         ) : (
           <>
             <div className="space-y-2.5">
-              <AnimatePresence mode="popLayout">
+              <AnimatePresence>
                 {visibleTasks.map((task, index) => {
                   const isActive = task.id === activeId;
                   return (
                     <div
                       key={task.id}
                       ref={registerTaskItem(task.id)}
+                      data-task-card="true"
+                      data-task-id={task.id}
                       className={cn(
                         "touch-pan-y",
                         isActive && "pointer-events-none"
@@ -537,7 +547,7 @@ export default function Tasks() {
             <div className="h-px flex-1 bg-border/60" />
           </div>
           <div className="space-y-2.5">
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence>
               {completedTasks.slice(0, 5).map((t, i) => (
                 <TaskCard key={t.id} task={t} index={i} onToggle={toggleComplete} onEdit={handleEdit} onDelete={deleteTask} />
               ))}
