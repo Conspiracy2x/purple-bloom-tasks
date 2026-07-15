@@ -16,6 +16,12 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: { id:"u1" }, loading:false, signOut: async()=>{} }) }));
 vi.mock("@/lib/motion", () => ({ animateCount: () => () => {} }));
+vi.mock("framer-motion", async () => {
+  const React = await import("react");
+  const pass = React.forwardRef(({ children, ...rest }: any, ref: any) => React.createElement("div", { ref, ...rest }, children));
+  const motion = new Proxy({}, { get: () => pass });
+  return { motion, AnimatePresence: ({ children }: any) => children };
+});
 import Tasks from "@/pages/Tasks";
 describe("render", () => {
   it("mounts", () => {
