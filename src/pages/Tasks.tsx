@@ -146,7 +146,7 @@ export default function Tasks() {
     const itemBounds = currentOrder.flatMap((id) => {
       if (id === snapshot.id) return [];
       const item = itemRefs.current.get(id);
-      if (!item) continue;
+      if (!item) return [];
 
       const rect = item.getBoundingClientRect();
       return [{ id, top: rect.top, height: rect.height }];
