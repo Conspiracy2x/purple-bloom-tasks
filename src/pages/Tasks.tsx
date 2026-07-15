@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from "react";
 import { createPortal } from "react-dom";
 import { animateCount } from "@/lib/motion";
 import { useTaskManager } from "@/hooks/useTaskManager";
@@ -14,7 +14,6 @@ import { AnimatePresence } from "framer-motion";
 
 type DragSnapshot = {
   id: string;
-  pointerId: number;
   pointerY: number;
   offsetY: number;
   width: number;
@@ -177,7 +176,6 @@ export default function Tasks() {
   useEffect(() => {
     if (!dragSnapshot) return;
 
-    const pointerId = dragSnapshot.pointerId;
     let animationFrame = 0;
     let latestClientY = dragSnapshot.pointerY;
 
@@ -202,21 +200,31 @@ export default function Tasks() {
       animationFrame = window.requestAnimationFrame(updateDrag);
     };
 
-    const handlePointerMove = (event: PointerEvent) => {
-      if (event.pointerId !== pointerId) return;
+    const handleMouseMove = (event: MouseEvent) => {
       event.preventDefault();
       latestClientY = event.clientY;
       requestDragUpdate();
     };
 
-    const handlePointerUp = (event: PointerEvent) => {
-      if (event.pointerId !== pointerId) return;
+    const handleMouseUp = (event: MouseEvent) => {
       event.preventDefault();
       finishDrag(true);
     };
 
-    const handlePointerCancel = (event: PointerEvent) => {
-      if (event.pointerId !== pointerId) return;
+    const handleTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0] ?? event.changedTouches[0];
+      if (!touch) return;
+      event.preventDefault();
+      latestClientY = touch.clientY;
+      requestDragUpdate();
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      event.preventDefault();
+      finishDrag(true);
+    };
+
+    const handleTouchCancel = () => {
       finishDrag(false);
     };
 
@@ -224,16 +232,20 @@ export default function Tasks() {
       if (event.key === "Escape") finishDrag(false);
     };
 
-    window.addEventListener("pointermove", handlePointerMove, { passive: false });
-    window.addEventListener("pointerup", handlePointerUp, { passive: false });
-    window.addEventListener("pointercancel", handlePointerCancel);
+    document.addEventListener("mousemove", handleMouseMove, { passive: false });
+    document.addEventListener("mouseup", handleMouseUp, { passive: false });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", handleTouchEnd, { passive: false });
+    document.addEventListener("touchcancel", handleTouchCancel, { passive: false });
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-      window.removeEventListener("pointercancel", handlePointerCancel);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener("touchcancel", handleTouchCancel);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [dragSnapshot, finishDrag, reorderPreviewForPointer]);
@@ -248,21 +260,15 @@ export default function Tasks() {
     }
   };
 
-  const startDrag = (taskId: string, event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!canReorder || (event.pointerType === "mouse" && event.button !== 0)) return;
-
+  const beginDrag = (taskId: string, clientY: number) => {
     const item = itemRefs.current.get(taskId);
-    if (!item) return;
-
-    event.preventDefault();
-    event.stopPropagation();
+    if (!canReorder || !item) return;
 
     const rect = item.getBoundingClientRect();
     const snapshot: DragSnapshot = {
       id: taskId,
-      pointerId: event.pointerId,
-      pointerY: event.clientY,
-      offsetY: event.clientY - rect.top,
+      pointerY: clientY,
+      offsetY: clientY - rect.top,
       width: rect.width,
       height: rect.height,
       left: rect.left,
@@ -278,6 +284,21 @@ export default function Tasks() {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate?.(10);
     }
+  };
+
+  const startMouseDrag = (taskId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    beginDrag(taskId, event.clientY);
+  };
+
+  const startTouchDrag = (taskId: string, event: ReactTouchEvent<HTMLButtonElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    event.preventDefault();
+    event.stopPropagation();
+    beginDrag(taskId, touch.clientY);
   };
 
   const handleEdit = (task: Task) => {
@@ -459,7 +480,10 @@ export default function Tasks() {
                         onDelete={deleteTask}
                         dragHandleProps={
                           canReorder
-                            ? { onPointerDown: (event) => startDrag(task.id, event) }
+                            ? {
+                                onMouseDown: (event) => startMouseDrag(task.id, event),
+                                onTouchStart: (event) => startTouchDrag(task.id, event),
+                              }
                             : undefined
                         }
                         isDragPlaceholder={isActive}
