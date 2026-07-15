@@ -307,6 +307,9 @@ export default function Tasks() {
     const startedOnControl = Boolean(target?.closest("button,a,input,textarea,select,[role='button'],[data-no-drag='true']"));
     if (!startedOnHandle && startedOnControl) return;
 
+    // On touch devices (mobile), only allow drag to start from the grip handle on the left.
+    if (event.pointerType === "touch" && !startedOnHandle) return;
+
     event.preventDefault();
     event.stopPropagation();
 
