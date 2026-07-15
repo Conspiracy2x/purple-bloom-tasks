@@ -95,7 +95,7 @@ export default function Tasks() {
     filteredActiveIdsRef.current = filteredActiveIds;
     if (!dragSnapshot) {
       visualOrderRef.current = filteredActiveIds;
-      setOrderedIds(filteredActiveIds);
+      setOrderedIds((current) => sameOrder(current, filteredActiveIds) ? current : filteredActiveIds);
     }
   }, [dragSnapshot, filteredActiveIds]);
 
@@ -477,6 +477,8 @@ export default function Tasks() {
                     <div
                       key={task.id}
                       ref={registerTaskItem(task.id)}
+                      data-task-card="true"
+                      data-task-id={task.id}
                       className={cn(
                         "touch-pan-y",
                         isActive && "pointer-events-none"
