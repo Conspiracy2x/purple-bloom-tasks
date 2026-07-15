@@ -1,4 +1,4 @@
-import type { MouseEventHandler, TouchEventHandler } from "react";
+import type { PointerEventHandler } from "react";
 import { Task } from "@/types/task";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,7 @@ interface TaskCardProps {
   onDelete: (id: string) => void;
   index?: number;
   dragHandleProps?: {
-    onMouseDown: MouseEventHandler<HTMLButtonElement>;
-    onTouchStart: TouchEventHandler<HTMLButtonElement>;
+    onPointerDown: PointerEventHandler<HTMLElement>;
   };
   isDragOverlay?: boolean;
   isDragPlaceholder?: boolean;
@@ -93,8 +92,8 @@ export function TaskCard({
               )}
               style={{ touchAction: "none" }}
               draggable={false}
-              onMouseDown={dragHandleProps.onMouseDown}
-              onTouchStart={dragHandleProps.onTouchStart}
+              data-drag-handle="true"
+              onPointerDown={dragHandleProps.onPointerDown}
               onClick={(event) => event.preventDefault()}
               onContextMenu={(event) => event.preventDefault()}
             >
@@ -104,9 +103,10 @@ export function TaskCard({
 
           <CardContent
             className={cn(
-              "relative flex items-stretch gap-0 p-0",
+              "relative flex items-stretch gap-0 p-0 touch-none select-none cursor-grab active:cursor-grabbing",
               canDrag && "pl-7 sm:pl-6"
             )}
+            onPointerDown={canDrag ? dragHandleProps.onPointerDown : undefined}
           >
             {/* Left rail: large editorial numeral */}
             {typeof index === "number" && (
@@ -239,6 +239,7 @@ export function TaskCard({
                 type="button"
                 aria-label={task.completed ? "Mark active" : "Mark complete"}
                 onClick={() => onToggle(task.id)}
+                data-no-drag="true"
                 className={cn(
                   "relative h-11 w-11 sm:h-12 sm:w-12 rounded-full grid place-items-center transition-all duration-300 active:scale-95",
                   task.completed
@@ -268,6 +269,7 @@ export function TaskCard({
                       "h-7 w-7 rounded-md",
                       tint ? "text-slate-800 hover:bg-black/10" : "hover:bg-primary/10 hover:text-primary"
                     )}
+                    data-no-drag="true"
                     onClick={() => onEdit(task)}
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -279,6 +281,7 @@ export function TaskCard({
                       "h-7 w-7 rounded-md",
                       tint ? "text-red-800 hover:bg-black/10" : "text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
                     )}
+                    data-no-drag="true"
                     onClick={() => onDelete(task.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />

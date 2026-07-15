@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { animateCount } from "@/lib/motion";
 import { useTaskManager } from "@/hooks/useTaskManager";
@@ -43,6 +43,7 @@ export default function Tasks() {
   const activeTasksRef = useRef<Task[]>([]);
   const dragSnapshotRef = useRef<DragSnapshot | null>(null);
   const dragSurfaceStylesRef = useRef<DragSurfaceStyles | null>(null);
+  const cleanupDragStreamRef = useRef<(() => void) | null>(null);
 
   // GSAP: animated stat counters
   useEffect(() => {
@@ -161,6 +162,9 @@ export default function Tasks() {
     const snapshot = dragSnapshotRef.current;
     if (!snapshot) return;
 
+    cleanupDragStreamRef.current?.();
+    cleanupDragStreamRef.current = null;
+
     const finalOrder = visualOrderRef.current;
     const currentActiveOrder = activeTasksRef.current.map((task) => task.id);
 
@@ -173,11 +177,11 @@ export default function Tasks() {
     restoreDragSurface();
   }, [reorderTasks, restoreDragSurface]);
 
-  useEffect(() => {
-    if (!dragSnapshot) return;
+  const attachDragStream = useCallback((initialClientY: number, pointerId: number) => {
+    cleanupDragStreamRef.current?.();
 
     let animationFrame = 0;
-    let latestClientY = dragSnapshot.pointerY;
+    let latestClientY = initialClientY;
 
     const updateDrag = () => {
       animationFrame = 0;
@@ -195,36 +199,36 @@ export default function Tasks() {
       }
     };
 
+    const flushDragUpdate = () => {
+      if (animationFrame) {
+        window.cancelAnimationFrame(animationFrame);
+        animationFrame = 0;
+      }
+      updateDrag();
+    };
+
     const requestDragUpdate = () => {
       if (animationFrame) return;
       animationFrame = window.requestAnimationFrame(updateDrag);
     };
 
-    const handleMouseMove = (event: MouseEvent) => {
+    const handlePointerMove = (event: PointerEvent) => {
+      if (event.pointerId !== pointerId) return;
       event.preventDefault();
       latestClientY = event.clientY;
       requestDragUpdate();
     };
 
-    const handleMouseUp = (event: MouseEvent) => {
+    const handlePointerUp = (event: PointerEvent) => {
+      if (event.pointerId !== pointerId) return;
       event.preventDefault();
+      latestClientY = event.clientY;
+      flushDragUpdate();
       finishDrag(true);
     };
 
-    const handleTouchMove = (event: TouchEvent) => {
-      const touch = event.touches[0] ?? event.changedTouches[0];
-      if (!touch) return;
-      event.preventDefault();
-      latestClientY = touch.clientY;
-      requestDragUpdate();
-    };
-
-    const handleTouchEnd = (event: TouchEvent) => {
-      event.preventDefault();
-      finishDrag(true);
-    };
-
-    const handleTouchCancel = () => {
+    const handlePointerCancel = (event: PointerEvent) => {
+      if (event.pointerId !== pointerId) return;
       finishDrag(false);
     };
 
@@ -232,25 +236,25 @@ export default function Tasks() {
       if (event.key === "Escape") finishDrag(false);
     };
 
-    document.addEventListener("mousemove", handleMouseMove, { passive: false });
-    document.addEventListener("mouseup", handleMouseUp, { passive: false });
-    document.addEventListener("touchmove", handleTouchMove, { passive: false });
-    document.addEventListener("touchend", handleTouchEnd, { passive: false });
-    document.addEventListener("touchcancel", handleTouchCancel, { passive: false });
+    window.addEventListener("pointermove", handlePointerMove, { passive: false });
+    window.addEventListener("pointerup", handlePointerUp, { passive: false });
+    window.addEventListener("pointercancel", handlePointerCancel, { passive: false });
     window.addEventListener("keydown", handleKeyDown);
 
-    return () => {
+    cleanupDragStreamRef.current = () => {
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.removeEventListener("touchmove", handleTouchMove);
-      document.removeEventListener("touchend", handleTouchEnd);
-      document.removeEventListener("touchcancel", handleTouchCancel);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [dragSnapshot, finishDrag, reorderPreviewForPointer]);
+  }, [finishDrag, reorderPreviewForPointer]);
 
-  useEffect(() => restoreDragSurface, [restoreDragSurface]);
+  useEffect(() => () => {
+    cleanupDragStreamRef.current?.();
+    cleanupDragStreamRef.current = null;
+    restoreDragSurface();
+  }, [restoreDragSurface]);
 
   const registerTaskItem = (id: string) => (node: HTMLDivElement | null) => {
     if (node) {
@@ -260,7 +264,7 @@ export default function Tasks() {
     }
   };
 
-  const beginDrag = (taskId: string, clientY: number) => {
+  const beginDrag = (taskId: string, clientY: number, pointerId: number) => {
     const item = itemRefs.current.get(taskId);
     if (!canReorder || !item) return;
 
@@ -280,25 +284,31 @@ export default function Tasks() {
     applyDragSurface();
     setDragSnapshot(snapshot);
     dragSnapshotRef.current = snapshot;
+    attachDragStream(clientY, pointerId);
 
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate?.(10);
     }
   };
 
-  const startMouseDrag = (taskId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    event.stopPropagation();
-    beginDrag(taskId, event.clientY);
-  };
+  const startPointerDrag = (taskId: string, event: ReactPointerEvent<HTMLElement>) => {
+    if (event.button !== 0 || event.isPrimary === false) return;
 
-  const startTouchDrag = (taskId: string, event: ReactTouchEvent<HTMLButtonElement>) => {
-    const touch = event.touches[0];
-    if (!touch) return;
+    const target = event.target as HTMLElement | null;
+    const startedOnHandle = Boolean(target?.closest("[data-drag-handle='true']"));
+    const startedOnControl = Boolean(target?.closest("button,a,input,textarea,select,[role='button'],[data-no-drag='true']"));
+    if (!startedOnHandle && startedOnControl) return;
+
     event.preventDefault();
     event.stopPropagation();
-    beginDrag(taskId, touch.clientY);
+
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Window-level listeners below keep the drag alive if capture is unavailable.
+    }
+
+    beginDrag(taskId, event.clientY, event.pointerId);
   };
 
   const handleEdit = (task: Task) => {
@@ -481,8 +491,7 @@ export default function Tasks() {
                         dragHandleProps={
                           canReorder
                             ? {
-                                onMouseDown: (event) => startMouseDrag(task.id, event),
-                                onTouchStart: (event) => startTouchDrag(task.id, event),
+                                onPointerDown: (event) => startPointerDrag(task.id, event),
                               }
                             : undefined
                         }
