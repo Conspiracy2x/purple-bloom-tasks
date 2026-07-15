@@ -311,6 +311,42 @@ export default function Tasks() {
     beginDrag(taskId, event.clientY, event.pointerId);
   };
 
+  useEffect(() => {
+    if (!canReorder) return;
+
+    const cleanups = visibleTasks.map((task) => {
+      const node = itemRefs.current.get(task.id);
+      if (!node) return null;
+
+      const handlePointerDown = (event: PointerEvent) => {
+        if (event.button !== 0 || event.isPrimary === false) return;
+
+        const target = event.target as HTMLElement | null;
+        const startedOnHandle = Boolean(target?.closest("[data-drag-handle='true']"));
+        const startedOnControl = Boolean(target?.closest("button,a,input,textarea,select,[role='button'],[data-no-drag='true']"));
+        if (!startedOnHandle && startedOnControl) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        try {
+          node.setPointerCapture(event.pointerId);
+        } catch {
+          // Window-level listeners keep the drag alive if capture is unavailable.
+        }
+
+        beginDrag(task.id, event.clientY, event.pointerId);
+      };
+
+      node.addEventListener("pointerdown", handlePointerDown, { capture: true, passive: false });
+      return () => node.removeEventListener("pointerdown", handlePointerDown, { capture: true });
+    });
+
+    return () => {
+      cleanups.forEach((cleanup) => cleanup?.());
+    };
+  }, [canReorder, visibleTasks, filteredActiveIds]);
+
   const handleEdit = (task: Task) => {
     setEditingTask(task);
     setDialogOpen(true);
@@ -479,7 +515,6 @@ export default function Tasks() {
                       ref={registerTaskItem(task.id)}
                       data-task-card="true"
                       data-task-id={task.id}
-                      onPointerDown={canReorder ? (event) => startPointerDrag(task.id, event) : undefined}
                       className={cn(
                         "touch-pan-y",
                         isActive && "pointer-events-none"
