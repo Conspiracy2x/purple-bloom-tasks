@@ -14,13 +14,14 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   KeyboardSensor,
   closestCenter,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import {
   arrayMove,
   SortableContext,
@@ -61,8 +62,12 @@ export default function Tasks() {
   const activeDragTask = activeId ? filteredActive.find((t) => t.id === activeId) ?? null : null;
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 6 } }),
+    // Mouse: tiny distance so click-vs-drag stays sharp on desktop.
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    // Touch: distance-based (not delay) since the grip handle is `touch-none`,
+    // so grabbing it never competes with page scroll. This makes drags feel
+    // instant on mobile instead of the old 120ms long-press pause.
+    useSensor(TouchSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -253,7 +258,8 @@ export default function Tasks() {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
-            autoScroll={{ threshold: { x: 0, y: 0.15 }, acceleration: 12 }}
+            modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+            autoScroll={{ threshold: { x: 0, y: 0.2 }, acceleration: 14 }}
           >
             <SortableContext items={filteredActive.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2.5">

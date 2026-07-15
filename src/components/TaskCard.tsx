@@ -50,11 +50,12 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
       transition={{ duration: 0.2 }}
     >
       {placeholder ? (
-        <div className="h-[104px] rounded-2xl border-2 border-dashed border-primary/60 bg-primary/[0.06] ring-mint transition-colors" />
+        <div className="h-[112px] rounded-2xl border-2 border-dashed border-primary/60 bg-primary/[0.06] ring-mint transition-colors" />
       ) : (
         <Card
           className={cn(
             "relative overflow-hidden rounded-2xl border-border/60 glass shadow-card hover-lift group",
+            sortable && "pl-1 sm:pl-0",
             task.completed && "opacity-60"
           )}
           style={tint ? { backgroundColor: tint, borderColor: "transparent" } : undefined}
@@ -71,22 +72,33 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
             />
           )}
 
-          <CardContent className="relative flex items-start gap-3 p-4 sm:p-5">
-            {sortable && (
-              <button
-                type="button"
-                aria-label="Drag to reorder"
-                className={cn(
-                  "mt-0.5 -ml-1.5 shrink-0 touch-none cursor-grab active:cursor-grabbing rounded-lg p-2 sm:p-1 -my-1 transition-colors select-none",
-                  tint ? "text-slate-800/60 hover:text-slate-900 hover:bg-black/10"
-                       : "text-muted-foreground/60 hover:text-primary hover:bg-primary/10"
-                )}
-                {...attributes}
-                {...listeners}
-              >
-                <GripVertical className="h-5 w-5 sm:h-4 sm:w-4" />
-              </button>
+          {/* Full-height drag rail on mobile — a big, obvious target that
+              never fights with page scroll. Collapses to a compact grip on ≥sm. */}
+          {sortable && (
+            <button
+              type="button"
+              aria-label="Drag to reorder"
+              className={cn(
+                "absolute inset-y-0 left-0 z-10 flex w-9 sm:w-7 items-center justify-center",
+                "touch-none select-none cursor-grab active:cursor-grabbing",
+                "transition-colors",
+                tint
+                  ? "text-slate-800/50 hover:text-slate-900 hover:bg-black/5 active:bg-black/10"
+                  : "text-muted-foreground/50 hover:text-primary hover:bg-primary/5 active:bg-primary/10"
+              )}
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="h-5 w-5 sm:h-4 sm:w-4" />
+            </button>
+          )}
+
+          <CardContent
+            className={cn(
+              "relative flex items-start gap-3 p-4 sm:p-5",
+              sortable && "pl-11 sm:pl-9"
             )}
+          >
 
             {typeof index === "number" && (
               <span
@@ -106,7 +118,7 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
               aria-label={task.completed ? "Mark active" : "Mark complete"}
               onClick={() => onToggle(task.id)}
               className={cn(
-                "mt-0.5 h-7 w-7 shrink-0 rounded-full grid place-items-center transition-all",
+                "mt-0.5 h-8 w-8 sm:h-7 sm:w-7 shrink-0 rounded-full grid place-items-center transition-all",
                 task.completed
                   ? "bg-mint-gradient text-primary-foreground shadow-glow"
                   : tint
@@ -115,9 +127,9 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
               )}
             >
               {task.completed ? (
-                <Undo2 className="h-3.5 w-3.5" />
+                <Undo2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
               ) : (
-                <Check className={cn("h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity", tint ? "text-slate-900" : "text-primary")} />
+                <Check className={cn("h-4 w-4 sm:h-3.5 sm:w-3.5 opacity-40 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity", tint ? "text-slate-900" : "text-primary")} />
               )}
             </button>
 
@@ -180,28 +192,28 @@ export function TaskCard({ task, onToggle, onEdit, onDelete, sortable = false, i
             </div>
 
             {!task.completed && (
-              <div className="flex flex-col sm:flex-row gap-0.5 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+              <div className="flex flex-col sm:flex-row gap-0.5 shrink-0 opacity-100 sm:opacity-70 sm:group-hover:opacity-100 transition-opacity">
                 <Button
                   size="icon"
                   variant="ghost"
                   className={cn(
-                    "h-7 w-7 rounded-md",
+                    "h-9 w-9 sm:h-7 sm:w-7 rounded-lg sm:rounded-md",
                     tint ? "text-slate-800 hover:bg-black/10" : "hover:bg-primary/10 hover:text-primary"
                   )}
                   onClick={() => onEdit(task)}
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
                   className={cn(
-                    "h-7 w-7 rounded-md",
+                    "h-9 w-9 sm:h-7 sm:w-7 rounded-lg sm:rounded-md",
                     tint ? "text-red-800 hover:bg-black/10" : "text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
                   )}
                   onClick={() => onDelete(task.id)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                 </Button>
               </div>
             )}
