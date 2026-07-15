@@ -191,7 +191,8 @@ export function TaskCard({
               )}
               <p
                 className={cn(
-                  "mt-1 text-[13.5px] sm:text-[15px] leading-relaxed break-words",
+                  "mt-1 text-[13.5px] leading-relaxed break-words",
+                  task.type === "normal" && "sm:text-[15px]",
                   task.completed && "line-through",
                   tint ? "text-slate-800/90" : "text-foreground/75"
                 )}
