@@ -265,6 +265,7 @@ export default function Tasks() {
   };
 
   const beginDrag = (taskId: string, clientY: number, pointerId: number) => {
+    console.log("[drag-debug] beginDrag", { taskId, clientY, pointerId, canReorder, hasItem: itemRefs.current.has(taskId) });
     const item = itemRefs.current.get(taskId);
     if (!canReorder || !item) return;
 
@@ -319,11 +320,13 @@ export default function Tasks() {
       if (!node) return null;
 
       const handlePointerDown = (event: PointerEvent) => {
+        console.log("[drag-debug] native pointerdown", { taskId: task.id, button: event.button, isPrimary: event.isPrimary, target: (event.target as HTMLElement | null)?.tagName });
         if (event.button !== 0 || event.isPrimary === false) return;
 
         const target = event.target as HTMLElement | null;
         const startedOnHandle = Boolean(target?.closest("[data-drag-handle='true']"));
         const startedOnControl = Boolean(target?.closest("button,a,input,textarea,select,[role='button'],[data-no-drag='true']"));
+        console.log("[drag-debug] guards", { startedOnHandle, startedOnControl });
         if (!startedOnHandle && startedOnControl) return;
 
         event.preventDefault();
