@@ -49,9 +49,11 @@ export function useTurnstile() {
     let cancelled = false;
     (async () => {
       try {
-        const { data, error } = await supabase.functions.invoke("captcha-config");
+        const { data } = await callWithRetry(
+          () => supabase.functions.invoke("captcha-config"),
+          { attempts: 3 }
+        );
         if (cancelled) return;
-        if (error) throw error;
         if (!data?.siteKey) throw new Error("missing_site_key");
         setSiteKey(data.siteKey);
       } catch (e) {
@@ -113,10 +115,11 @@ export function useTurnstile() {
       return false;
     }
     try {
-      const { data, error } = await supabase.functions.invoke("verify-captcha", {
-        body: { token },
-      });
-      if (error || !data?.success) {
+      const { data } = await callWithRetry(
+        () => supabase.functions.invoke("verify-captcha", { body: { token } }),
+        { attempts: 3 }
+      );
+      if (!data?.success) {
         setError("Security check failed. Please try again.");
         reset();
         return false;
