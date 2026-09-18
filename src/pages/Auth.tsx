@@ -10,6 +10,7 @@ import { LogIn, UserPlus, Loader2, CheckCircle2, Mail } from "lucide-react";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { PasswordInput } from "@/components/PasswordInput";
 import { emailSchema, passwordSchema, getAuthErrorMessage } from "@/lib/validation";
+import { callWithRetry } from "@/lib/retry";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -50,22 +51,23 @@ export default function Auth() {
         return;
       }
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await callWithRetry(() => supabase.auth.signInWithPassword({ email, password }));
         navigate("/");
       } else if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
+        await callWithRetry(() =>
+          supabase.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: window.location.origin },
+          })
+        );
         setMessage("Check your email for a verification link before signing in.");
       } else {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        });
-        if (error) throw error;
+        await callWithRetry(() =>
+          supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+          })
+        );
         setMessage("If an account exists for that email, a reset link is on its way.");
         turnstile.reset();
       }

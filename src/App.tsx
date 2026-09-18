@@ -15,7 +15,22 @@ import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
 
-const queryClient = new QueryClient();
+import { isTransientError } from "@/lib/retry";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Retry transient cold-start/network failures with backoff so the app
+      // recovers silently when the backend is waking up.
+      retry: (failureCount, error) => failureCount < 3 && isTransientError(error),
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    },
+    mutations: {
+      retry: (failureCount, error) => failureCount < 1 && isTransientError(error),
+      retryDelay: 1500,
+    },
+  },
+});
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
