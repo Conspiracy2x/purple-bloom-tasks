@@ -11,6 +11,7 @@ import { useTurnstile } from "@/hooks/useTurnstile";
 import { PasswordInput } from "@/components/PasswordInput";
 import { emailSchema, passwordSchema, getAuthErrorMessage } from "@/lib/validation";
 import { callWithRetry } from "@/lib/retry";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function Auth() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const turnstile = useTurnstile();
+  const { continueAsGuest } = useAuth();
 
   const validate = () => {
     const e = emailSchema.safeParse(email);
@@ -187,6 +189,23 @@ export default function Auth() {
                 {mode === "login" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}
               </span>
             </Button>
+            <div className="flex w-full items-center gap-3 text-[11px] uppercase tracking-wider text-muted-foreground">
+              <span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 rounded-xl bg-background/40"
+              onClick={() => {
+                continueAsGuest();
+                navigate("/");
+              }}
+            >
+              Continue as guest
+            </Button>
+            <p className="text-[11px] text-muted-foreground text-center -mt-1">
+              Guest tasks are saved only in this browser.
+            </p>
             <Button
               type="button"
               variant="link"
