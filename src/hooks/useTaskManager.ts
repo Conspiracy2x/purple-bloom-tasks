@@ -4,16 +4,18 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Task } from "@/types/task";
+import { guestStore } from "@/lib/guestStore";
 import { computeTaskStats, rowToTask, taskInputSchema } from "@/lib/tasks";
 
 export function useTaskManager() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const qc = useQueryClient();
-  const queryKey = ["tasks", user?.id];
+  const queryKey = ["tasks", user?.id, isGuest];
 
   const { data: tasks = [] } = useQuery({
     queryKey,
     queryFn: async () => {
+      if (isGuest) return guestStore.list().map(rowToTask);
       const { data, error } = await supabase
         .from("tasks")
         .select("*")
@@ -38,15 +40,16 @@ export function useTaskManager() {
       if (!parsed.success) throw new Error(parsed.error.issues[0].message);
       // Place new tasks at the top (lowest position value)
       const minPos = tasks.reduce((m, t) => Math.min(m, t.position ?? 0), 0);
-      const { error } = await supabase.from("tasks").insert({
-        user_id: user!.id,
+      const row = {
         type: parsed.data.type,
         heading: parsed.data.heading || null,
         description: parsed.data.description,
         task_category: parsed.data.taskCategory || null,
         color: parsed.data.color || null,
         position: minPos - 1,
-      });
+      };
+      if (isGuest) return guestStore.insert(row);
+      const { error } = await supabase.from("tasks").insert({ ...row, user_id: user!.id });
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -76,6 +79,7 @@ export function useTaskManager() {
       if (updates.taskCategory !== undefined) payload.task_category = updates.taskCategory || null;
       if (updates.type !== undefined) payload.type = updates.type;
       if (updates.color !== undefined) payload.color = updates.color || null;
+      if (isGuest) return guestStore.update(id, payload);
       const { error } = await supabase.from("tasks").update(payload).eq("id", id);
       if (error) throw error;
     },
@@ -84,6 +88,7 @@ export function useTaskManager() {
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: string) => {
+      if (isGuest) return guestStore.remove(id);
       const { error } = await supabase.from("tasks").delete().eq("id", id);
       if (error) throw error;
     },
@@ -94,12 +99,14 @@ export function useTaskManager() {
     mutationFn: async (id: string) => {
       const task = tasks.find((t) => t.id === id);
       if (!task) return;
+      const patch = {
+        completed: !task.completed,
+        completed_at: !task.completed ? new Date().toISOString() : null,
+      };
+      if (isGuest) return guestStore.update(id, patch);
       const { error } = await supabase
         .from("tasks")
-        .update({
-          completed: !task.completed,
-          completed_at: !task.completed ? new Date().toISOString() : null,
-        })
+        .update(patch)
         .eq("id", id);
       if (error) throw error;
     },
@@ -108,6 +115,10 @@ export function useTaskManager() {
 
   const reorderTasksMutation = useMutation({
     mutationFn: async (updates: { id: string; position: number }[]) => {
+      if (isGuest) {
+        updates.forEach((u) => guestStore.update(u.id, { position: u.position }));
+        return;
+      }
       const results = await Promise.all(
         updates.map((u) =>
           supabase.from("tasks").update({ position: u.position }).eq("id", u.id)
